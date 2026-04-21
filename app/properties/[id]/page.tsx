@@ -1,0 +1,101 @@
+import Link from "next/link";
+import Image from "next/image";
+import { notFound } from "next/navigation";
+import { getPropertyDetails } from "@/lib/services/propertyService";
+
+interface PropertyDetailPageProps {
+  params: {
+    id: string;
+  };
+}
+
+export default async function PropertyDetailPage({
+  params,
+}: PropertyDetailPageProps) {
+  const property = await getPropertyDetails(params.id);
+
+  if (!property) {
+    notFound();
+  }
+
+  return (
+    <main className="min-h-screen bg-zinc-950 p-4 text-white md:p-6">
+      <div className="mx-auto max-w-4xl space-y-6">
+        <Link
+          href="/"
+          className="inline-flex rounded-lg bg-zinc-800 px-3 py-2 text-sm hover:bg-zinc-700"
+        >
+          Back to search
+        </Link>
+
+        <article className="overflow-hidden rounded-2xl border border-zinc-700 bg-zinc-900 shadow-lg">
+          <Image
+            src={property.images[0] ?? "/mock1.svg"}
+            alt={property.title}
+            className="h-64 w-full object-cover"
+            width={1280}
+            height={420}
+          />
+
+          <div className="space-y-4 p-6">
+            <div className="space-y-2">
+              <h1 className="text-3xl font-semibold">{property.title}</h1>
+              <p className="text-zinc-300">{property.location}</p>
+              <div className="flex flex-wrap gap-2 text-sm">
+                <span className="rounded-full bg-emerald-600/20 px-3 py-1 text-emerald-300">
+                  RM {property.price}/month
+                </span>
+                <span className="rounded-full bg-zinc-700 px-3 py-1 text-zinc-200">
+                  {property.rooms} room{property.rooms > 1 ? "s" : ""}
+                </span>
+                <span className="rounded-full bg-zinc-700 px-3 py-1 text-zinc-200">
+                  {property.petsAllowed ? "Pets allowed" : "No pets"}
+                </span>
+              </div>
+            </div>
+
+            <p className="text-zinc-200">{property.description}</p>
+
+            <section>
+              <h2 className="mb-2 text-lg font-semibold">Amenities</h2>
+              <div className="flex flex-wrap gap-2">
+                {property.amenities.map((amenity) => (
+                  <span
+                    key={amenity}
+                    className="rounded-full bg-zinc-800 px-3 py-1 text-sm text-zinc-200"
+                  >
+                    {amenity}
+                  </span>
+                ))}
+              </div>
+            </section>
+
+            <section>
+              <h2 className="mb-2 text-lg font-semibold">Rules</h2>
+              <ul className="list-inside list-disc space-y-1 text-zinc-200">
+                {property.rules.map((rule) => (
+                  <li key={rule}>{rule}</li>
+                ))}
+              </ul>
+            </section>
+
+            <div className="grid gap-2 text-sm text-zinc-300 md:grid-cols-2">
+              <p>
+                <span className="text-zinc-500">Property ID:</span>{" "}
+                {property.id}
+              </p>
+              <p>
+                <span className="text-zinc-500">Owner ID:</span>{" "}
+                {property.ownerId}
+              </p>
+              <p>
+                <span className="text-zinc-500">Availability:</span>{" "}
+                {property.availabilityDate}
+              </p>
+            </div>
+          </div>
+        </article>
+      </div>
+    </main>
+  );
+}
