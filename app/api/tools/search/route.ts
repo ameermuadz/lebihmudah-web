@@ -41,6 +41,7 @@ export async function POST(request: NextRequest) {
       maxPrice?: unknown;
       rooms?: unknown;
       petsAllowed?: unknown;
+      limit?: unknown;
     };
 
     const payload: SearchPayload = {
@@ -51,6 +52,7 @@ export async function POST(request: NextRequest) {
       maxPrice: toNumber(body.maxPrice),
       rooms: toNumber(body.rooms),
       petsAllowed: toBoolean(body.petsAllowed),
+      limit: toNumber(body.limit),
     };
 
     const results = await searchProperties(payload);

@@ -33,6 +33,7 @@ export interface SearchPayload {
   maxPrice?: number;
   rooms?: number;
   petsAllowed?: boolean;
+  limit?: number;
 }
 
 export interface BookingPayload {

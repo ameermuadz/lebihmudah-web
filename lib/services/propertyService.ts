@@ -43,6 +43,11 @@ const mapDetails = (property: PropertyWithRelations): PropertyDetails => ({
 export async function searchProperties(
   filters: SearchPayload,
 ): Promise<Property[]> {
+  const take =
+    typeof filters.limit === "number" && Number.isFinite(filters.limit)
+      ? Math.max(1, Math.min(100, Math.floor(filters.limit)))
+      : undefined;
+
   const where = {
     ...(filters.location?.trim()
       ? { location: { contains: filters.location.trim() } }
@@ -60,6 +65,7 @@ export async function searchProperties(
 
   const properties = await prisma.property.findMany({
     where,
+    ...(take ? { take } : {}),
     include: {
       images: true,
       amenities: true,

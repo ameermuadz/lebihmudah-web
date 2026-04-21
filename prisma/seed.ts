@@ -2,7 +2,22 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-const seedProperties = [
+type SeedProperty = {
+  id: string;
+  title: string;
+  location: string;
+  price: number;
+  rooms: number;
+  petsAllowed: boolean;
+  images: string[];
+  ownerId: string;
+  description: string;
+  amenities: string[];
+  rules: string[];
+  availabilityDate: string;
+};
+
+const baseSeedProperties: SeedProperty[] = [
   {
     id: "p_101",
     title: "Cozy 2-Room near UM",
@@ -73,7 +88,116 @@ const seedProperties = [
     rules: ["Register pets with management", "No renovations"],
     availabilityDate: "2026-07-01",
   },
-] as const;
+];
+
+const locations = [
+  "Universiti Malaya",
+  "Bangsar",
+  "PJ Section 13",
+  "Cheras",
+  "Subang Jaya",
+  "Setapak",
+  "Mont Kiara",
+  "Shah Alam",
+  "Kepong",
+  "Puchong",
+  "Damansara",
+  "KL Sentral",
+];
+
+const titlePrefixes = [
+  "Modern Studio",
+  "Cozy Suite",
+  "City Apartment",
+  "Family Condo",
+  "Budget Unit",
+  "Garden Residence",
+  "Loft",
+  "Urban Home",
+];
+
+const amenityPool = [
+  "Aircon",
+  "Fridge",
+  "WiFi",
+  "Water Heater",
+  "Parking",
+  "Washing Machine",
+  "Gym",
+  "Pool",
+  "Study Desk",
+  "Microwave",
+  "Balcony",
+  "Wardrobe",
+];
+
+const rulePool = [
+  "No smoking indoors",
+  "No loud music after 10PM",
+  "Keep shared areas clean",
+  "Maximum 3 occupants",
+  "No short-term subletting",
+  "Pets must be registered",
+  "Quiet hours after 11PM",
+  "No parties",
+];
+
+const mockImages = [
+  "/mock1.svg",
+  "/mock2.svg",
+  "/mock3.svg",
+  "/mock4.svg",
+  "/mock5.svg",
+];
+
+const buildAvailabilityDate = (offset: number) => {
+  const month = ((offset % 12) + 1).toString().padStart(2, "0");
+  const day = ((offset % 28) + 1).toString().padStart(2, "0");
+  return `2026-${month}-${day}`;
+};
+
+const generatedSeedProperties: SeedProperty[] = Array.from(
+  { length: 240 },
+  (_, index) => {
+    const propertyNumber = 106 + index;
+    const location = locations[index % locations.length];
+    const rooms = (index % 4) + 1;
+    const petsAllowed = index % 3 !== 0;
+    const price = 750 + ((index * 67) % 2600);
+    const ownerId = `o_${900 + propertyNumber}`;
+
+    const amenities = [
+      amenityPool[index % amenityPool.length],
+      amenityPool[(index + 3) % amenityPool.length],
+      amenityPool[(index + 7) % amenityPool.length],
+    ];
+
+    const rules = [
+      rulePool[index % rulePool.length],
+      rulePool[(index + 4) % rulePool.length],
+    ];
+
+    return {
+      id: `p_${propertyNumber}`,
+      title: `${titlePrefixes[index % titlePrefixes.length]} ${rooms}-Room in ${location}`,
+      location,
+      price,
+      rooms,
+      petsAllowed,
+      images: [mockImages[index % mockImages.length]],
+      ownerId,
+      description: `Comfortable ${rooms}-room unit in ${location} suitable for renters looking for quick access to transit and daily essentials.`,
+      amenities,
+      rules,
+      availabilityDate: buildAvailabilityDate(index + 1),
+    };
+  },
+);
+
+const seedProperties: SeedProperty[] = [
+  ...baseSeedProperties,
+  ...generatedSeedProperties,
+];
 
 async function main() {
   await prisma.ownerMessage.deleteMany();
