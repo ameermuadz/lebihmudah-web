@@ -114,7 +114,9 @@ export default function HomeSearchClient({
           <p className="inline-flex rounded-full bg-emerald-500/20 px-3 py-1 text-xs font-medium text-emerald-700 dark:text-emerald-300">
             Find your next home
           </p>
-          <h1 className="text-3xl font-semibold">Search for a home you will love</h1>
+          <h1 className="text-3xl font-semibold">
+            Search for a home you will love
+          </h1>
           <p className="text-zinc-600 dark:text-zinc-400">
             Browse homes, compare options, and filter by location, budget, room
             count, or pet policy to find a place that feels right for you.
