@@ -12,18 +12,52 @@ const applyThemeToDocument = (theme: ThemeMode) => {
   root.classList.add(theme);
 };
 
+const SunIcon = ({ className }: { className: string }) => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+  >
+    <circle cx="12" cy="12" r="4.5" />
+    <path d="M12 2.75v2.5" />
+    <path d="M12 18.75v2.5" />
+    <path d="M4.75 12h2.5" />
+    <path d="M16.75 12h2.5" />
+    <path d="m6.8 6.8 1.8 1.8" />
+    <path d="m15.4 15.4 1.8 1.8" />
+    <path d="m17.2 6.8-1.8 1.8" />
+    <path d="m8.6 15.4-1.8 1.8" />
+  </svg>
+);
+
+const MoonIcon = ({ className }: { className: string }) => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+  >
+    <path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5Z" />
+  </svg>
+);
+
 export default function ThemeToggle() {
-  const [theme, setTheme] = useState<ThemeMode>("dark");
-  const [isReady, setIsReady] = useState(false);
+  const [theme, setTheme] = useState<ThemeMode>("light");
 
   useEffect(() => {
     const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
     const nextTheme: ThemeMode =
-      savedTheme === "light" || savedTheme === "dark" ? savedTheme : "dark";
+      savedTheme === "light" || savedTheme === "dark" ? savedTheme : "light";
 
     setTheme(nextTheme);
     applyThemeToDocument(nextTheme);
-    setIsReady(true);
   }, []);
 
   const handleToggle = () => {
@@ -37,14 +71,20 @@ export default function ThemeToggle() {
     <button
       type="button"
       onClick={handleToggle}
-      className="fixed right-4 top-4 z-50 rounded-full border border-zinc-300 bg-white/90 px-4 py-2 text-sm font-medium text-zinc-900 shadow-md backdrop-blur transition hover:bg-white dark:border-zinc-700 dark:bg-zinc-900/90 dark:text-zinc-100 dark:hover:bg-zinc-800"
-      aria-label="Toggle theme"
+      className="fixed right-4 top-4 z-50 inline-flex h-11 w-11 items-center justify-center rounded-full border border-zinc-300 bg-white/90 text-zinc-900 shadow-lg backdrop-blur transition hover:scale-[1.03] hover:bg-white dark:border-zinc-700 dark:bg-zinc-900/90 dark:text-zinc-100 dark:hover:bg-zinc-800"
+      aria-label={
+        theme === "dark" ? "Switch to light theme" : "Switch to dark theme"
+      }
+      aria-pressed={theme === "dark"}
+      title={
+        theme === "dark" ? "Switch to light theme" : "Switch to dark theme"
+      }
     >
-      {isReady
-        ? theme === "dark"
-          ? "Switch to Light"
-          : "Switch to Dark"
-        : "Theme"}
+      {theme === "dark" ? (
+        <SunIcon className="h-5 w-5" />
+      ) : (
+        <MoonIcon className="h-5 w-5" />
+      )}
     </button>
   );
 }

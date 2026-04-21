@@ -1,4 +1,5 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from "../generated/prisma";
+import { hashPassword } from "../lib/auth";
 
 const prisma = new PrismaClient();
 
@@ -199,13 +200,42 @@ const seedProperties: SeedProperty[] = [
   ...generatedSeedProperties,
 ];
 
+const seedUsers = [
+  {
+    name: "Aiman Rahman",
+    email: "aiman@example.com",
+    password: "password123",
+  },
+  {
+    name: "Sara Lee",
+    email: "sara@example.com",
+    password: "password123",
+  },
+];
+
 async function main() {
+  await prisma.session.deleteMany();
   await prisma.ownerMessage.deleteMany();
   await prisma.booking.deleteMany();
+  await prisma.user.deleteMany();
   await prisma.propertyRule.deleteMany();
   await prisma.propertyAmenity.deleteMany();
   await prisma.propertyImage.deleteMany();
   await prisma.property.deleteMany();
+
+  const createdUsers = [] as Array<{ id: string; name: string; email: string }>;
+
+  for (const user of seedUsers) {
+    const createdUser = await prisma.user.create({
+      data: {
+        name: user.name,
+        email: user.email,
+        passwordHash: hashPassword(user.password),
+      },
+    });
+
+    createdUsers.push(createdUser);
+  }
 
   for (const property of seedProperties) {
     const { images, amenities, rules, ...baseProperty } = property;
@@ -235,7 +265,21 @@ async function main() {
     });
   }
 
-  console.log(`Seeded ${seedProperties.length} properties`);
+  const bookedPropertyIds = ["p_101", "p_102", "p_105"];
+
+  await prisma.booking.createMany({
+    data: bookedPropertyIds.map((propertyId, index) => ({
+      propertyId,
+      userId: createdUsers[index % createdUsers.length].id,
+      userContact: createdUsers[index % createdUsers.length].email,
+      moveInDate: `2026-0${index + 5}-01`,
+      status: "CONFIRMED",
+    })),
+  });
+
+  console.log(
+    `Seeded ${seedProperties.length} properties, ${createdUsers.length} users, and ${bookedPropertyIds.length} bookings`,
+  );
 }
 
 main()

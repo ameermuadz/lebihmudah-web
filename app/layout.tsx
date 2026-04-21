@@ -17,9 +17,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" className="light" suppressHydrationWarning>
       <body
-        className={`${inter.className} min-h-screen bg-slate-100 text-zinc-900 transition-colors dark:bg-zinc-950 dark:text-zinc-100`}
+        className={`${inter.className} min-h-screen bg-slate-50 text-zinc-900 transition-colors dark:bg-zinc-950 dark:text-zinc-100`}
       >
         <ThemeToggle />
         {children}

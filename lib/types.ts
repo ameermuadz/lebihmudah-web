@@ -42,6 +42,29 @@ export interface BookingPayload {
   moveInDate: string;
 }
 
+export interface AuthUser {
+  id: string;
+  name: string;
+  email: string;
+}
+
+export interface AuthSession {
+  token: string;
+  user: AuthUser;
+  expiresAt: string;
+}
+
+export interface SignupPayload {
+  name: string;
+  email: string;
+  password: string;
+}
+
+export interface LoginPayload {
+  email: string;
+  password: string;
+}
+
 export interface BookingConfirmation {
   confirmationId: string;
   propertyId: string;
@@ -49,4 +72,6 @@ export interface BookingConfirmation {
   moveInDate: string;
   status: string;
   createdAt: string;
+  userId?: string | null;
+  userName?: string | null;
 }

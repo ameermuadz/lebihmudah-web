@@ -1,5 +1,6 @@
 generator client {
   provider = "prisma-client-js"
+  output   = "../generated/prisma"
 }
 
 datasource db {
@@ -24,6 +25,29 @@ model Property {
   rules            PropertyRule[]
   ownerMessages    OwnerMessage[]
   bookings         Booking[]
+}
+
+model User {
+  id           String    @id @default(cuid())
+  name         String
+  email        String    @unique
+  passwordHash String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  sessions     Session[]
+  bookings     Booking[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
 }
 
 model PropertyImage {
@@ -73,13 +97,16 @@ model OwnerMessage {
 }
 
 model Booking {
-  id         String   @id @default(cuid())
-  propertyId String
+  id          String   @id @default(cuid())
+  propertyId  String
+  userId      String?
   userContact String
-  moveInDate String
-  status     String   @default("CONFIRMED")
-  createdAt  DateTime @default(now())
-  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  moveInDate  String
+  status      String   @default("CONFIRMED")
+  createdAt   DateTime @default(now())
+  property    Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([propertyId])
+  @@index([userId])
 }

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
+import BookingPanel from "@/components/BookingPanel";
 import { getPropertyDetails } from "@/lib/services/propertyService";
 
 interface PropertyDetailPageProps {
@@ -103,6 +104,11 @@ export default async function PropertyDetailPage({
                 {property.availabilityDate}
               </p>
             </div>
+
+            <BookingPanel
+              propertyId={property.id}
+              propertyTitle={property.title}
+            />
           </div>
         </article>
       </div>

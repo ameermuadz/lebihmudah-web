@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 
 export interface CreateBookingInput {
   propertyId: string;
+  userId?: string | null;
   userContact: string;
   moveInDate: string;
 }
@@ -13,6 +14,8 @@ export interface BookingResult {
   moveInDate: string;
   status: string;
   createdAt: string;
+  userId?: string | null;
+  userName?: string | null;
 }
 
 export async function createBooking(
@@ -30,9 +33,13 @@ export async function createBooking(
   const booking = await prisma.booking.create({
     data: {
       propertyId: input.propertyId,
+      userId: input.userId ?? null,
       userContact: input.userContact,
       moveInDate: input.moveInDate,
       status: "CONFIRMED",
+    },
+    include: {
+      user: true,
     },
   });
 
@@ -43,5 +50,7 @@ export async function createBooking(
     moveInDate: booking.moveInDate,
     status: booking.status,
     createdAt: booking.createdAt.toISOString(),
+    userId: booking.userId,
+    userName: booking.user?.name ?? null,
   };
 }

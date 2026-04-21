@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { AUTH_COOKIE_NAME } from "@/lib/auth";
 import { createBooking } from "@/lib/services/bookingService";
+import { getSessionUser } from "@/lib/services/authService";
 import { BookingPayload } from "@/lib/types";
 
 export async function POST(request: NextRequest) {
@@ -8,16 +10,29 @@ export async function POST(request: NextRequest) {
       .json()
       .catch(() => ({}))) as Partial<BookingPayload>;
 
-    if (!body.propertyId || !body.userContact || !body.moveInDate) {
+    const sessionToken = request.cookies.get(AUTH_COOKIE_NAME)?.value;
+    const session = await getSessionUser(sessionToken);
+
+    if (!body.propertyId || !body.moveInDate) {
       return NextResponse.json(
-        { error: "propertyId, userContact, and moveInDate are required" },
+        { error: "propertyId and moveInDate are required" },
         { status: 400 },
+      );
+    }
+
+    const userContact = session?.user.email ?? body.userContact;
+
+    if (!userContact) {
+      return NextResponse.json(
+        { error: "userContact is required when not logged in" },
+        { status: 401 },
       );
     }
 
     const booking = await createBooking({
       propertyId: body.propertyId,
-      userContact: body.userContact,
+      userId: session?.user.id ?? null,
+      userContact,
       moveInDate: body.moveInDate,
     });
 
