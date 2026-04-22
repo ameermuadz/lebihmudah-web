@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import AppShell from "@/components/AppShell";
 import ThemeToggle from "@/components/ThemeToggle";
 import "./globals.css";
 
@@ -22,7 +23,7 @@ export default function RootLayout({
         className={`${inter.className} min-h-screen bg-slate-50 text-zinc-900 transition-colors dark:bg-zinc-950 dark:text-zinc-100`}
       >
         <ThemeToggle />
-        {children}
+        <AppShell>{children}</AppShell>
       </body>
     </html>
   );

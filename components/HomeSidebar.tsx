@@ -193,7 +193,7 @@ export default function HomeSidebar({
 
   const isActiveLink = (href: string) => {
     if (href === "/") {
-      return pathname === "/";
+      return pathname === "/" || pathname.startsWith("/properties/");
     }
 
     return pathname.startsWith(href);
