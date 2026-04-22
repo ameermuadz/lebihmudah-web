@@ -157,6 +157,20 @@ const buildAvailabilityDate = (offset: number) => {
   return `2026-${month}-${day}`;
 };
 
+const toIsoDate = (date: Date) => {
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, "0");
+  const day = `${date.getDate()}`.padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+};
+
+const addDays = (isoDate: string, days: number) => {
+  const date = new Date(`${isoDate}T00:00:00`);
+  date.setDate(date.getDate() + days);
+  return toIsoDate(date);
+};
+
 const generatedSeedProperties: SeedProperty[] = Array.from(
   { length: 240 },
   (_, index) => {
@@ -272,7 +286,8 @@ async function main() {
       propertyId,
       userId: createdUsers[index % createdUsers.length].id,
       userContact: createdUsers[index % createdUsers.length].email,
-      moveInDate: `2026-0${index + 5}-01`,
+      moveInDate: `2026-${String(index + 5).padStart(2, "0")}-01`,
+      moveOutDate: addDays(`2026-${String(index + 5).padStart(2, "0")}-01`, 4),
       status: "CONFIRMED",
     })),
   });

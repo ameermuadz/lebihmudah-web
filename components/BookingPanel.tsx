@@ -2,10 +2,14 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import DateRangePicker from "@/components/DateRangePicker";
+import type { BookingConfirmation } from "@/lib/types";
 
 interface BookingPanelProps {
   propertyId: string;
   propertyTitle: string;
+  availabilityDate: string;
+  bookings: BookingConfirmation[];
 }
 
 interface SessionUser {
@@ -17,11 +21,26 @@ interface SessionUser {
 export default function BookingPanel({
   propertyId,
   propertyTitle,
+  availabilityDate,
+  bookings: initialBookings,
 }: BookingPanelProps) {
   const [user, setUser] = useState<SessionUser | null>(null);
+  const [bookings, setBookings] =
+    useState<BookingConfirmation[]>(initialBookings);
   const [moveInDate, setMoveInDate] = useState("");
+  const [moveOutDate, setMoveOutDate] = useState("");
   const [status, setStatus] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  const formatDateLabel = (value: string) => {
+    const parsedDate = new Date(`${value}T00:00:00`);
+
+    return new Intl.DateTimeFormat("en-MY", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    }).format(parsedDate);
+  };
 
   useEffect(() => {
     const loadUser = async () => {
@@ -47,8 +66,8 @@ export default function BookingPanel({
       return;
     }
 
-    if (!moveInDate) {
-      setStatus("Please choose a move-in date.");
+    if (!moveInDate || !moveOutDate) {
+      setStatus("Please choose both move-in and move-out dates.");
       return;
     }
 
@@ -64,6 +83,7 @@ export default function BookingPanel({
         body: JSON.stringify({
           propertyId,
           moveInDate,
+          moveOutDate,
         }),
       });
 
@@ -73,8 +93,11 @@ export default function BookingPanel({
         throw new Error(data.error ?? "Booking failed");
       }
 
+      setBookings((currentBookings) => [...currentBookings, data]);
+      setMoveInDate("");
+      setMoveOutDate("");
       setStatus(
-        `Booking confirmed for ${propertyTitle}. Confirmation ID: ${data.confirmationId}`,
+        `Booking confirmed for ${propertyTitle} from ${formatDateLabel(moveInDate)} to ${formatDateLabel(moveOutDate)}. Confirmation ID: ${data.confirmationId}`,
       );
     } catch (bookingError) {
       const reason =
@@ -95,6 +118,9 @@ export default function BookingPanel({
           {user
             ? `Signed in as ${user.name} (${user.email})`
             : "Log in to book this property from the web UI."}
+        </p>
+        <p className="mt-1 text-xs uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">
+          Available from {formatDateLabel(availabilityDate)}
         </p>
       </div>
 
@@ -118,16 +144,30 @@ export default function BookingPanel({
         </div>
       ) : (
         <div className="space-y-3">
-          <input
-            value={moveInDate}
-            onChange={(event) => setMoveInDate(event.target.value)}
-            type="date"
-            className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-emerald-500 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-100"
+          <DateRangePicker
+            startDate={moveInDate}
+            endDate={moveOutDate}
+            minDate={availabilityDate}
+            bookings={bookings}
+            currentUserId={user?.id ?? null}
+            onChange={({ startDate, endDate }) => {
+              setMoveInDate(startDate);
+              setMoveOutDate(endDate);
+            }}
           />
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">
+            Choose your full stay in one calendar. Move-out is the checkout day.
+          </p>
+          {moveInDate && moveOutDate ? (
+            <p className="text-sm text-zinc-700 dark:text-zinc-300">
+              Selected stay: {formatDateLabel(moveInDate)} to{" "}
+              {formatDateLabel(moveOutDate)}
+            </p>
+          ) : null}
           <button
             type="button"
             onClick={() => void handleBook()}
-            disabled={isLoading}
+            disabled={isLoading || !moveInDate || !moveOutDate}
             className="w-full rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:bg-zinc-400 dark:disabled:bg-zinc-700"
           >
             {isLoading ? "Booking..." : "Confirm Booking"}

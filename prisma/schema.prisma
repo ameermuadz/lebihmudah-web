@@ -102,11 +102,13 @@ model Booking {
   userId      String?
   userContact String
   moveInDate  String
+  moveOutDate String
   status      String   @default("CONFIRMED")
   createdAt   DateTime @default(now())
   property    Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
   user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([propertyId])
+  @@index([propertyId, moveInDate, moveOutDate])
   @@index([userId])
 }

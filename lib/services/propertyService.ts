@@ -1,5 +1,10 @@
 import { prisma } from "@/lib/db";
-import { Property, PropertyDetails, SearchPayload } from "@/lib/types";
+import {
+  BookingConfirmation,
+  Property,
+  PropertyDetails,
+  SearchPayload,
+} from "@/lib/types";
 
 type PropertyWithRelations = {
   id: string;
@@ -14,6 +19,16 @@ type PropertyWithRelations = {
   images: Array<{ url: string; sortOrder: number }>;
   amenities: Array<{ value: string; sortOrder: number }>;
   rules: Array<{ value: string; sortOrder: number }>;
+  bookings?: Array<{
+    id: string;
+    userId: string | null;
+    userContact: string;
+    moveInDate: string;
+    moveOutDate: string;
+    status: string;
+    createdAt: Date;
+    user: { id: string; name: string } | null;
+  }>;
 };
 
 const bySortOrder = <T extends { sortOrder: number }>(a: T, b: T) =>
@@ -38,6 +53,19 @@ const mapDetails = (property: PropertyWithRelations): PropertyDetails => ({
     .sort(bySortOrder)
     .map((amenity) => amenity.value),
   rules: [...property.rules].sort(bySortOrder).map((rule) => rule.value),
+  bookings: [...(property.bookings ?? [])]
+    .sort((left, right) => left.moveInDate.localeCompare(right.moveInDate))
+    .map<BookingConfirmation>((booking) => ({
+      confirmationId: booking.id,
+      propertyId: property.id,
+      userContact: booking.userContact,
+      moveInDate: booking.moveInDate,
+      moveOutDate: booking.moveOutDate,
+      status: booking.status,
+      createdAt: booking.createdAt.toISOString(),
+      userId: booking.userId,
+      userName: booking.user?.name ?? null,
+    })),
 });
 
 export async function searchProperties(
@@ -86,6 +114,21 @@ export async function getPropertyDetails(
       images: true,
       amenities: true,
       rules: true,
+      bookings: {
+        where: {
+          status: {
+            not: "CANCELLED",
+          },
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+      },
     },
   });
 

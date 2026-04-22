@@ -9431,6 +9431,7 @@ export namespace Prisma {
     userId: string | null
     userContact: string | null
     moveInDate: string | null
+    moveOutDate: string | null
     status: string | null
     createdAt: Date | null
   }
@@ -9441,6 +9442,7 @@ export namespace Prisma {
     userId: string | null
     userContact: string | null
     moveInDate: string | null
+    moveOutDate: string | null
     status: string | null
     createdAt: Date | null
   }
@@ -9451,6 +9453,7 @@ export namespace Prisma {
     userId: number
     userContact: number
     moveInDate: number
+    moveOutDate: number
     status: number
     createdAt: number
     _all: number
@@ -9463,6 +9466,7 @@ export namespace Prisma {
     userId?: true
     userContact?: true
     moveInDate?: true
+    moveOutDate?: true
     status?: true
     createdAt?: true
   }
@@ -9473,6 +9477,7 @@ export namespace Prisma {
     userId?: true
     userContact?: true
     moveInDate?: true
+    moveOutDate?: true
     status?: true
     createdAt?: true
   }
@@ -9483,6 +9488,7 @@ export namespace Prisma {
     userId?: true
     userContact?: true
     moveInDate?: true
+    moveOutDate?: true
     status?: true
     createdAt?: true
     _all?: true
@@ -9566,6 +9572,7 @@ export namespace Prisma {
     userId: string | null
     userContact: string
     moveInDate: string
+    moveOutDate: string
     status: string
     createdAt: Date
     _count: BookingCountAggregateOutputType | null
@@ -9593,6 +9600,7 @@ export namespace Prisma {
     userId?: boolean
     userContact?: boolean
     moveInDate?: boolean
+    moveOutDate?: boolean
     status?: boolean
     createdAt?: boolean
     property?: boolean | PropertyDefaultArgs<ExtArgs>
@@ -9605,6 +9613,7 @@ export namespace Prisma {
     userId?: boolean
     userContact?: boolean
     moveInDate?: boolean
+    moveOutDate?: boolean
     status?: boolean
     createdAt?: boolean
     property?: boolean | PropertyDefaultArgs<ExtArgs>
@@ -9617,6 +9626,7 @@ export namespace Prisma {
     userId?: boolean
     userContact?: boolean
     moveInDate?: boolean
+    moveOutDate?: boolean
     status?: boolean
     createdAt?: boolean
     property?: boolean | PropertyDefaultArgs<ExtArgs>
@@ -9629,11 +9639,12 @@ export namespace Prisma {
     userId?: boolean
     userContact?: boolean
     moveInDate?: boolean
+    moveOutDate?: boolean
     status?: boolean
     createdAt?: boolean
   }
 
-  export type BookingOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "propertyId" | "userId" | "userContact" | "moveInDate" | "status" | "createdAt", ExtArgs["result"]["booking"]>
+  export type BookingOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "propertyId" | "userId" | "userContact" | "moveInDate" | "moveOutDate" | "status" | "createdAt", ExtArgs["result"]["booking"]>
   export type BookingInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     property?: boolean | PropertyDefaultArgs<ExtArgs>
     user?: boolean | Booking$userArgs<ExtArgs>
@@ -9659,6 +9670,7 @@ export namespace Prisma {
       userId: string | null
       userContact: string
       moveInDate: string
+      moveOutDate: string
       status: string
       createdAt: Date
     }, ExtArgs["result"]["booking"]>
@@ -10091,6 +10103,7 @@ export namespace Prisma {
     readonly userId: FieldRef<"Booking", 'String'>
     readonly userContact: FieldRef<"Booking", 'String'>
     readonly moveInDate: FieldRef<"Booking", 'String'>
+    readonly moveOutDate: FieldRef<"Booking", 'String'>
     readonly status: FieldRef<"Booking", 'String'>
     readonly createdAt: FieldRef<"Booking", 'DateTime'>
   }
@@ -10626,6 +10639,7 @@ export namespace Prisma {
     userId: 'userId',
     userContact: 'userContact',
     moveInDate: 'moveInDate',
+    moveOutDate: 'moveOutDate',
     status: 'status',
     createdAt: 'createdAt'
   };
@@ -11149,6 +11163,7 @@ export namespace Prisma {
     userId?: StringNullableFilter<"Booking"> | string | null
     userContact?: StringFilter<"Booking"> | string
     moveInDate?: StringFilter<"Booking"> | string
+    moveOutDate?: StringFilter<"Booking"> | string
     status?: StringFilter<"Booking"> | string
     createdAt?: DateTimeFilter<"Booking"> | Date | string
     property?: XOR<PropertyScalarRelationFilter, PropertyWhereInput>
@@ -11161,6 +11176,7 @@ export namespace Prisma {
     userId?: SortOrderInput | SortOrder
     userContact?: SortOrder
     moveInDate?: SortOrder
+    moveOutDate?: SortOrder
     status?: SortOrder
     createdAt?: SortOrder
     property?: PropertyOrderByWithRelationInput
@@ -11176,6 +11192,7 @@ export namespace Prisma {
     userId?: StringNullableFilter<"Booking"> | string | null
     userContact?: StringFilter<"Booking"> | string
     moveInDate?: StringFilter<"Booking"> | string
+    moveOutDate?: StringFilter<"Booking"> | string
     status?: StringFilter<"Booking"> | string
     createdAt?: DateTimeFilter<"Booking"> | Date | string
     property?: XOR<PropertyScalarRelationFilter, PropertyWhereInput>
@@ -11188,6 +11205,7 @@ export namespace Prisma {
     userId?: SortOrderInput | SortOrder
     userContact?: SortOrder
     moveInDate?: SortOrder
+    moveOutDate?: SortOrder
     status?: SortOrder
     createdAt?: SortOrder
     _count?: BookingCountOrderByAggregateInput
@@ -11204,6 +11222,7 @@ export namespace Prisma {
     userId?: StringNullableWithAggregatesFilter<"Booking"> | string | null
     userContact?: StringWithAggregatesFilter<"Booking"> | string
     moveInDate?: StringWithAggregatesFilter<"Booking"> | string
+    moveOutDate?: StringWithAggregatesFilter<"Booking"> | string
     status?: StringWithAggregatesFilter<"Booking"> | string
     createdAt?: DateTimeWithAggregatesFilter<"Booking"> | Date | string
   }
@@ -11674,6 +11693,7 @@ export namespace Prisma {
     id?: string
     userContact: string
     moveInDate: string
+    moveOutDate: string
     status?: string
     createdAt?: Date | string
     property: PropertyCreateNestedOneWithoutBookingsInput
@@ -11686,6 +11706,7 @@ export namespace Prisma {
     userId?: string | null
     userContact: string
     moveInDate: string
+    moveOutDate: string
     status?: string
     createdAt?: Date | string
   }
@@ -11694,6 +11715,7 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     userContact?: StringFieldUpdateOperationsInput | string
     moveInDate?: StringFieldUpdateOperationsInput | string
+    moveOutDate?: StringFieldUpdateOperationsInput | string
     status?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     property?: PropertyUpdateOneRequiredWithoutBookingsNestedInput
@@ -11706,6 +11728,7 @@ export namespace Prisma {
     userId?: NullableStringFieldUpdateOperationsInput | string | null
     userContact?: StringFieldUpdateOperationsInput | string
     moveInDate?: StringFieldUpdateOperationsInput | string
+    moveOutDate?: StringFieldUpdateOperationsInput | string
     status?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -11716,6 +11739,7 @@ export namespace Prisma {
     userId?: string | null
     userContact: string
     moveInDate: string
+    moveOutDate: string
     status?: string
     createdAt?: Date | string
   }
@@ -11724,6 +11748,7 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     userContact?: StringFieldUpdateOperationsInput | string
     moveInDate?: StringFieldUpdateOperationsInput | string
+    moveOutDate?: StringFieldUpdateOperationsInput | string
     status?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -11734,6 +11759,7 @@ export namespace Prisma {
     userId?: NullableStringFieldUpdateOperationsInput | string | null
     userContact?: StringFieldUpdateOperationsInput | string
     moveInDate?: StringFieldUpdateOperationsInput | string
+    moveOutDate?: StringFieldUpdateOperationsInput | string
     status?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -12208,6 +12234,7 @@ export namespace Prisma {
     userId?: SortOrder
     userContact?: SortOrder
     moveInDate?: SortOrder
+    moveOutDate?: SortOrder
     status?: SortOrder
     createdAt?: SortOrder
   }
@@ -12218,6 +12245,7 @@ export namespace Prisma {
     userId?: SortOrder
     userContact?: SortOrder
     moveInDate?: SortOrder
+    moveOutDate?: SortOrder
     status?: SortOrder
     createdAt?: SortOrder
   }
@@ -12228,6 +12256,7 @@ export namespace Prisma {
     userId?: SortOrder
     userContact?: SortOrder
     moveInDate?: SortOrder
+    moveOutDate?: SortOrder
     status?: SortOrder
     createdAt?: SortOrder
   }
@@ -12923,6 +12952,7 @@ export namespace Prisma {
     id?: string
     userContact: string
     moveInDate: string
+    moveOutDate: string
     status?: string
     createdAt?: Date | string
     user?: UserCreateNestedOneWithoutBookingsInput
@@ -12933,6 +12963,7 @@ export namespace Prisma {
     userId?: string | null
     userContact: string
     moveInDate: string
+    moveOutDate: string
     status?: string
     createdAt?: Date | string
   }
@@ -13080,6 +13111,7 @@ export namespace Prisma {
     userId?: StringNullableFilter<"Booking"> | string | null
     userContact?: StringFilter<"Booking"> | string
     moveInDate?: StringFilter<"Booking"> | string
+    moveOutDate?: StringFilter<"Booking"> | string
     status?: StringFilter<"Booking"> | string
     createdAt?: DateTimeFilter<"Booking"> | Date | string
   }
@@ -13111,6 +13143,7 @@ export namespace Prisma {
     id?: string
     userContact: string
     moveInDate: string
+    moveOutDate: string
     status?: string
     createdAt?: Date | string
     property: PropertyCreateNestedOneWithoutBookingsInput
@@ -13121,6 +13154,7 @@ export namespace Prisma {
     propertyId: string
     userContact: string
     moveInDate: string
+    moveOutDate: string
     status?: string
     createdAt?: Date | string
   }
@@ -13763,6 +13797,7 @@ export namespace Prisma {
     userId?: string | null
     userContact: string
     moveInDate: string
+    moveOutDate: string
     status?: string
     createdAt?: Date | string
   }
@@ -13855,6 +13890,7 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     userContact?: StringFieldUpdateOperationsInput | string
     moveInDate?: StringFieldUpdateOperationsInput | string
+    moveOutDate?: StringFieldUpdateOperationsInput | string
     status?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     user?: UserUpdateOneWithoutBookingsNestedInput
@@ -13865,6 +13901,7 @@ export namespace Prisma {
     userId?: NullableStringFieldUpdateOperationsInput | string | null
     userContact?: StringFieldUpdateOperationsInput | string
     moveInDate?: StringFieldUpdateOperationsInput | string
+    moveOutDate?: StringFieldUpdateOperationsInput | string
     status?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -13874,6 +13911,7 @@ export namespace Prisma {
     userId?: NullableStringFieldUpdateOperationsInput | string | null
     userContact?: StringFieldUpdateOperationsInput | string
     moveInDate?: StringFieldUpdateOperationsInput | string
+    moveOutDate?: StringFieldUpdateOperationsInput | string
     status?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -13890,6 +13928,7 @@ export namespace Prisma {
     propertyId: string
     userContact: string
     moveInDate: string
+    moveOutDate: string
     status?: string
     createdAt?: Date | string
   }
@@ -13919,6 +13958,7 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     userContact?: StringFieldUpdateOperationsInput | string
     moveInDate?: StringFieldUpdateOperationsInput | string
+    moveOutDate?: StringFieldUpdateOperationsInput | string
     status?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     property?: PropertyUpdateOneRequiredWithoutBookingsNestedInput
@@ -13929,6 +13969,7 @@ export namespace Prisma {
     propertyId?: StringFieldUpdateOperationsInput | string
     userContact?: StringFieldUpdateOperationsInput | string
     moveInDate?: StringFieldUpdateOperationsInput | string
+    moveOutDate?: StringFieldUpdateOperationsInput | string
     status?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -13938,6 +13979,7 @@ export namespace Prisma {
     propertyId?: StringFieldUpdateOperationsInput | string
     userContact?: StringFieldUpdateOperationsInput | string
     moveInDate?: StringFieldUpdateOperationsInput | string
+    moveOutDate?: StringFieldUpdateOperationsInput | string
     status?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }

@@ -14,6 +14,7 @@ export interface PropertyDetails extends Property {
   amenities: string[];
   rules: string[];
   availabilityDate: string;
+  bookings: BookingConfirmation[];
 }
 
 export interface OwnerMessage {
@@ -40,6 +41,7 @@ export interface BookingPayload {
   propertyId: string;
   userContact: string;
   moveInDate: string;
+  moveOutDate: string;
 }
 
 export interface AuthUser {
@@ -70,6 +72,7 @@ export interface BookingConfirmation {
   propertyId: string;
   userContact: string;
   moveInDate: string;
+  moveOutDate: string;
   status: string;
   createdAt: string;
   userId?: string | null;

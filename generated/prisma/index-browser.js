@@ -187,6 +187,7 @@ exports.Prisma.BookingScalarFieldEnum = {
   userId: 'userId',
   userContact: 'userContact',
   moveInDate: 'moveInDate',
+  moveOutDate: 'moveOutDate',
   status: 'status',
   createdAt: 'createdAt'
 };
