@@ -3,12 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-
-interface SessionUser {
-  id: string;
-  name: string;
-  email: string;
-}
+import type { AuthUser } from "@/lib/types";
 
 interface HomeSidebarProps {
   isCollapsed: boolean;
@@ -173,9 +168,10 @@ const navItems = [
     icon: BookingsIcon,
   },
   {
-    href: "/owner-dashboard",
-    label: "Owner Dashboard",
+    href: "/dashboard",
+    label: "Dashboard",
     icon: DashboardIcon,
+    requiresOwner: true,
   },
 ];
 
@@ -185,7 +181,7 @@ export default function HomeSidebar({
 }: HomeSidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const [user, setUser] = useState<SessionUser | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
@@ -213,7 +209,7 @@ export default function HomeSidebar({
           return;
         }
 
-        const data = (await response.json()) as { user?: SessionUser };
+        const data = (await response.json()) as { user?: AuthUser };
         if (isMounted) {
           setUser(data.user ?? null);
         }
@@ -233,7 +229,7 @@ export default function HomeSidebar({
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [pathname]);
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
@@ -325,6 +321,14 @@ export default function HomeSidebar({
 
         <nav className="space-y-2 text-sm font-medium">
           {navItems.map((item) => {
+            if (
+              "requiresOwner" in item &&
+              item.requiresOwner &&
+              user?.role !== "OWNER"
+            ) {
+              return null;
+            }
+
             const Icon = item.icon;
             const active = isActiveLink(item.href);
 

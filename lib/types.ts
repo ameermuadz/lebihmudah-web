@@ -14,6 +14,9 @@ export interface PropertyDetails extends Property {
   amenities: string[];
   rules: string[];
   availabilityDate: string;
+  ownerName: string;
+  ownerEmail: string;
+  ownerPhone: string | null;
   bookings: BookingConfirmation[];
 }
 
@@ -48,6 +51,8 @@ export interface AuthUser {
   id: string;
   name: string;
   email: string;
+  phone: string | null;
+  role: UserRole;
 }
 
 export interface AuthSession {
@@ -60,6 +65,7 @@ export interface SignupPayload {
   name: string;
   email: string;
   password: string;
+  phone?: string;
 }
 
 export interface LoginPayload {
@@ -102,3 +108,5 @@ export interface BookingListItem {
   userId?: string | null;
   userName?: string | null;
 }
+
+export type UserRole = "USER" | "OWNER";

@@ -17,6 +17,13 @@ type PropertyWithRelations = {
   ownerId: string;
   description: string;
   availabilityDate: string;
+  owner: {
+    id: string;
+    name: string;
+    email: string;
+    phone: string | null;
+    role: string;
+  };
   images: Array<{ url: string; sortOrder: number }>;
   amenities: Array<{ value: string; sortOrder: number }>;
   rules: Array<{ value: string; sortOrder: number }>;
@@ -67,6 +74,9 @@ const mapDetails = (property: PropertyWithRelations): PropertyDetails => ({
       userId: booking.userId,
       userName: booking.user?.name ?? null,
     })),
+  ownerName: property.owner.name,
+  ownerEmail: property.owner.email,
+  ownerPhone: property.owner.phone,
 });
 
 export async function searchProperties(
@@ -99,6 +109,15 @@ export async function searchProperties(
       images: true,
       amenities: true,
       rules: true,
+      owner: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          role: true,
+        },
+      },
     },
     orderBy: [{ price: "asc" }, { createdAt: "desc" }],
   });
@@ -115,6 +134,15 @@ export async function getPropertyDetails(
       images: true,
       amenities: true,
       rules: true,
+      owner: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          role: true,
+        },
+      },
       bookings: {
         where: {
           status: {
@@ -138,4 +166,30 @@ export async function getPropertyDetails(
   }
 
   return mapDetails(property);
+}
+
+export async function getPropertiesByOwner(ownerId: string) {
+  const properties = await prisma.property.findMany({
+    where: { ownerId },
+    include: {
+      images: true,
+      owner: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          role: true,
+        },
+      },
+      amenities: true,
+      rules: true,
+    },
+    orderBy: [{ createdAt: "desc" }],
+  });
+
+  return properties.map((property) => ({
+    ...mapSummary(property),
+    availabilityDate: property.availabilityDate,
+  }));
 }

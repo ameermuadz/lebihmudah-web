@@ -16,16 +16,26 @@ const mapUser = (user: {
   id: string;
   name: string;
   email: string;
+  phone: string | null;
+  role: "USER" | "OWNER";
 }): AuthUser => ({
   id: user.id,
   name: user.name,
   email: user.email,
+  phone: user.phone,
+  role: user.role,
 });
 
 const mapSession = (session: {
   token: string;
   expiresAt: Date;
-  user: { id: string; name: string; email: string };
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    phone: string | null;
+    role: "USER" | "OWNER";
+  };
 }): AuthSession => ({
   token: session.token,
   user: mapUser(session.user),
@@ -46,6 +56,8 @@ export async function signupUser(input: SignupPayload): Promise<AuthSession> {
     data: {
       name: input.name.trim(),
       email: input.email.trim().toLowerCase(),
+      phone: input.phone?.trim() ? input.phone.trim() : null,
+      role: "USER",
       passwordHash,
     },
   });

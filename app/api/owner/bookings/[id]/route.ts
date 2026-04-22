@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import { AUTH_COOKIE_NAME } from "@/lib/auth";
+import { getSessionUser } from "@/lib/services/authService";
 import {
   BookingConflictError,
+  BookingAuthorizationError,
   BookingTransitionError,
   updateBookingStatus,
 } from "@/lib/services/bookingService";
@@ -10,6 +13,17 @@ export async function PATCH(
   { params }: { params: { id: string } },
 ) {
   try {
+    const sessionToken = request.cookies.get(AUTH_COOKIE_NAME)?.value;
+    const session = await getSessionUser(sessionToken);
+
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    if (session.user.role !== "OWNER") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     const body = (await request.json().catch(() => ({}))) as {
       action?: "confirm" | "cancel";
     };
@@ -23,6 +37,7 @@ export async function PATCH(
 
     const booking = await updateBookingStatus({
       bookingId: params.id,
+      ownerId: session.user.id,
       status: body.action === "confirm" ? "CONFIRMED" : "CANCELLED",
     });
 
@@ -34,6 +49,10 @@ export async function PATCH(
   } catch (error) {
     if (error instanceof BookingConflictError) {
       return NextResponse.json({ error: error.message }, { status: 409 });
+    }
+
+    if (error instanceof BookingAuthorizationError) {
+      return NextResponse.json({ error: error.message }, { status: 403 });
     }
 
     if (error instanceof BookingTransitionError) {

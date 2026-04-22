@@ -8,6 +8,11 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum UserRole {
+  USER
+  OWNER
+}
+
 model Property {
   id               String            @id
   title            String
@@ -20,22 +25,28 @@ model Property {
   availabilityDate String
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
+  owner            User              @relation(fields: [ownerId], references: [id], onDelete: Restrict)
   images           PropertyImage[]
   amenities        PropertyAmenity[]
   rules            PropertyRule[]
   ownerMessages    OwnerMessage[]
   bookings         Booking[]
+
+  @@index([ownerId])
 }
 
 model User {
-  id           String    @id @default(cuid())
+  id           String     @id @default(cuid())
   name         String
-  email        String    @unique
+  email        String     @unique
+  phone        String?
+  role         UserRole   @default(USER)
   passwordHash String
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
   sessions     Session[]
   bookings     Booking[]
+  properties   Property[]
 }
 
 model Session {
@@ -103,7 +114,7 @@ model Booking {
   userContact String
   moveInDate  String
   moveOutDate String
-  status      String   @default("CONFIRMED")
+  status      String   @default("PENDING")
   createdAt   DateTime @default(now())
   property    Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
   user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)

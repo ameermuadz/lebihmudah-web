@@ -28,8 +28,11 @@ type SeedProperty = {
 };
 
 type SeedUser = {
+  id?: string;
   name: string;
   email: string;
+  phone?: string | null;
+  role?: "USER" | "OWNER";
   password: string;
 };
 
@@ -201,6 +204,19 @@ const normalizeImageUrl = (value: string) => {
 
 const normalizeStatus = (value: string) => value.trim().toUpperCase();
 
+const buildOwnerProfile = (ownerId: string): SeedUser => {
+  const numericId = ownerId.replace(/\D/g, "");
+
+  return {
+    id: ownerId,
+    name: `Owner ${numericId}`,
+    email: `owner${numericId}@lebihmudah.my`,
+    phone: `+60 12-${numericId} ${numericId}`,
+    role: "OWNER",
+    password: `owner${numericId}123`,
+  };
+};
+
 async function main() {
   const [propertyRows, userRows, bookingRows] = await Promise.all([
     readCsvFile("properties.csv"),
@@ -208,16 +224,43 @@ async function main() {
     readCsvFile("bookings.csv"),
   ]);
 
+  const ownerProfiles = Array.from(
+    new Set(propertyRows.map((row) => row.ownerId)),
+  )
+    .sort()
+    .map(buildOwnerProfile);
+
   await prisma.session.deleteMany();
-  await prisma.ownerMessage.deleteMany();
   await prisma.booking.deleteMany();
-  await prisma.user.deleteMany();
+  await prisma.ownerMessage.deleteMany();
   await prisma.propertyRule.deleteMany();
   await prisma.propertyAmenity.deleteMany();
   await prisma.propertyImage.deleteMany();
   await prisma.property.deleteMany();
+  await prisma.user.deleteMany();
 
-  const createdUsers: Array<{ id: string; name: string; email: string }> = [];
+  const createdUsers: Array<{
+    id: string;
+    name: string;
+    email: string;
+    phone: string | null;
+    role: "USER" | "OWNER";
+  }> = [];
+
+  for (const owner of ownerProfiles) {
+    const createdOwner = await prisma.user.create({
+      data: {
+        id: owner.id,
+        name: owner.name,
+        email: owner.email.trim().toLowerCase(),
+        phone: owner.phone ?? null,
+        role: "OWNER",
+        passwordHash: hashPassword(owner.password),
+      },
+    });
+
+    createdUsers.push(createdOwner);
+  }
 
   for (const userRow of userRows) {
     const user: SeedUser = {
@@ -230,6 +273,8 @@ async function main() {
       data: {
         name: user.name,
         email: user.email.trim().toLowerCase(),
+        phone: user.phone ?? null,
+        role: user.role ?? "USER",
         passwordHash: hashPassword(user.password),
       },
     });
@@ -325,7 +370,7 @@ async function main() {
   });
 
   console.log(
-    `Seeded ${propertyRows.length} properties, ${createdUsers.length} users, and ${seedBookings.length} bookings from CSV files`,
+    `Seeded ${ownerProfiles.length} owners, ${userRows.length} users, ${propertyRows.length} properties, and ${seedBookings.length} bookings from CSV files`,
   );
 }
 

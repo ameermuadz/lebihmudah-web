@@ -29,6 +29,13 @@ export class BookingTransitionError extends Error {
   }
 }
 
+export class BookingAuthorizationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "BookingAuthorizationError";
+  }
+}
+
 export interface CreateBookingInput {
   propertyId: string;
   userId?: string | null;
@@ -83,6 +90,7 @@ type BookingWithRelations = {
   createdAt: Date;
   property: {
     id: string;
+    ownerId: string;
     title: string;
     location: string;
     images: Array<{ url: string; sortOrder: number }>;
@@ -117,15 +125,6 @@ const mapBookingListItem = (
 export async function createBooking(
   input: CreateBookingInput,
 ): Promise<BookingResult | null> {
-  const property = await prisma.property.findUnique({
-    where: { id: input.propertyId },
-    select: { id: true, availabilityDate: true },
-  });
-
-  if (!property) {
-    return null;
-  }
-
   const moveInDate = input.moveInDate.trim();
   const moveOutDate = input.moveOutDate.trim();
 
@@ -139,50 +138,74 @@ export async function createBooking(
     throw new BookingRangeError("moveOutDate must be after moveInDate");
   }
 
-  if (compareIsoDates(moveInDate, property.availabilityDate) < 0) {
-    throw new BookingRangeError(
-      `This property is available from ${property.availabilityDate}`,
-    );
-  }
+  const booking = await prisma.$transaction(async (tx) => {
+    const property = await tx.property.findUnique({
+      where: { id: input.propertyId },
+      select: { id: true, availabilityDate: true },
+    });
 
-  const conflictingBooking = await prisma.booking.findFirst({
-    where: {
-      propertyId: input.propertyId,
-      status: {
-        in: ["PENDING", "CONFIRMED"],
+    if (!property) {
+      return null;
+    }
+
+    if (compareIsoDates(moveInDate, property.availabilityDate) < 0) {
+      throw new BookingRangeError(
+        `This property is available from ${property.availabilityDate}`,
+      );
+    }
+
+    const conflictingBooking = await tx.booking.findFirst({
+      where: {
+        propertyId: input.propertyId,
+        status: {
+          in: ["PENDING", "CONFIRMED"],
+        },
+        moveInDate: {
+          lt: moveOutDate,
+        },
+        moveOutDate: {
+          gt: moveInDate,
+        },
       },
-      moveInDate: {
-        lt: moveOutDate,
+      select: {
+        moveInDate: true,
+        moveOutDate: true,
       },
-      moveOutDate: {
-        gt: moveInDate,
+    });
+
+    if (conflictingBooking) {
+      throw new BookingConflictError(
+        `This property is already booked from ${conflictingBooking.moveInDate} to ${conflictingBooking.moveOutDate}.`,
+      );
+    }
+
+    const createdBooking = await tx.booking.create({
+      data: {
+        propertyId: input.propertyId,
+        userId: input.userId ?? null,
+        userContact: input.userContact,
+        moveInDate,
+        moveOutDate,
+        status: "PENDING",
       },
-    },
-    select: {
-      moveInDate: true,
-      moveOutDate: true,
-    },
+      include: {
+        user: true,
+      },
+    });
+
+    await tx.property.update({
+      where: { id: property.id },
+      data: {
+        availabilityDate: moveOutDate,
+      },
+    });
+
+    return createdBooking;
   });
 
-  if (conflictingBooking) {
-    throw new BookingConflictError(
-      `This property is already booked from ${conflictingBooking.moveInDate} to ${conflictingBooking.moveOutDate}.`,
-    );
+  if (!booking) {
+    return null;
   }
-
-  const booking = await prisma.booking.create({
-    data: {
-      propertyId: input.propertyId,
-      userId: input.userId ?? null,
-      userContact: input.userContact,
-      moveInDate,
-      moveOutDate,
-      status: "PENDING",
-    },
-    include: {
-      user: true,
-    },
-  });
 
   return {
     confirmationId: booking.id,
@@ -221,10 +244,15 @@ export async function getUserBookings(
   return bookings.map((booking) => mapBookingListItem(booking));
 }
 
-export async function getPendingBookings(): Promise<BookingListItem[]> {
+export async function getPendingBookings(
+  ownerId: string,
+): Promise<BookingListItem[]> {
   const bookings = await prisma.booking.findMany({
     where: {
       status: "PENDING",
+      property: {
+        ownerId,
+      },
     },
     include: {
       property: {
@@ -247,6 +275,7 @@ export async function getPendingBookings(): Promise<BookingListItem[]> {
 
 export async function updateBookingStatus(input: {
   bookingId: string;
+  ownerId: string;
   status: Extract<BookingStatus, "CONFIRMED" | "CANCELLED">;
 }): Promise<BookingListItem | null> {
   const booking = await prisma.booking.findUnique({
@@ -268,6 +297,12 @@ export async function updateBookingStatus(input: {
 
   if (!booking) {
     return null;
+  }
+
+  if (booking.property.ownerId !== input.ownerId) {
+    throw new BookingAuthorizationError(
+      "You can only manage bookings for your own properties",
+    );
   }
 
   if (booking.status === input.status) {

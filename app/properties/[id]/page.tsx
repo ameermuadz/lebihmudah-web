@@ -62,6 +62,34 @@ export default async function PropertyDetailPage({
                 {property.description}
               </p>
 
+              <section className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-950">
+                <p className="text-xs uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">
+                  Contact info
+                </p>
+                <h2 className="mt-2 text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+                  Managed by {property.ownerName}
+                </h2>
+                <div className="mt-3 grid gap-2 text-sm text-zinc-700 dark:text-zinc-300">
+                  <p>
+                    <span className="text-zinc-500 dark:text-zinc-500">
+                      Email:
+                    </span>{" "}
+                    <a
+                      href={`mailto:${property.ownerEmail}`}
+                      className="text-emerald-700 underline dark:text-emerald-300"
+                    >
+                      {property.ownerEmail}
+                    </a>
+                  </p>
+                  <p>
+                    <span className="text-zinc-500 dark:text-zinc-500">
+                      Phone:
+                    </span>{" "}
+                    {property.ownerPhone ?? "Not provided"}
+                  </p>
+                </div>
+              </section>
+
               <section>
                 <h2 className="mb-2 text-lg font-semibold">Amenities</h2>
                 <div className="flex flex-wrap gap-2">
@@ -91,12 +119,6 @@ export default async function PropertyDetailPage({
                     Property ID:
                   </span>{" "}
                   {property.id}
-                </p>
-                <p>
-                  <span className="text-zinc-500 dark:text-zinc-500">
-                    Owner ID:
-                  </span>{" "}
-                  {property.ownerId}
                 </p>
                 <p>
                   <span className="text-zinc-500 dark:text-zinc-500">

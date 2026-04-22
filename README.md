@@ -9,7 +9,8 @@ LebihMudah.my is a Next.js 14 property search and booking demo backed by Prisma 
 - Sign up, log in, and log out with cookie-based sessions.
 - Request a property from the website when signed in, then track pending,
   confirmed, and cancelled states.
-- Use the owner dashboard and chat simulator pages.
+- Owners can open the dashboard at `/dashboard` to approve bookings on their
+  own properties, and everyone can use the chat simulator page.
 - Switch between light and dark theme with the icon button in the top-right corner.
 - See the first 10 properties immediately on the homepage.
 
@@ -51,6 +52,8 @@ npm run db:seed
 
 This command clears the demo tables first and then imports `properties.csv`, `users.csv`, and `bookings.csv`. Keep those files in the workspace root or one of its parent folders before seeding. In this workspace, they live in `c:\hackathon\lebihmudah\`, one level above `lebihmudah-web`.
 
+Owner accounts are also created from the property owner IDs during seed, with login emails like `owner101@lebihmudah.my` and matching passwords such as `owner101123`.
+
 5. Start the development server.
 
 ```bash
@@ -66,7 +69,7 @@ Open http://localhost:3000
 - `/chat` chat simulator
 - `/login` login form
 - `/signup` sign-up form
-- `/owner-dashboard` owner approvals and owner dashboard
+- `/dashboard` owner-only property approval dashboard
 - `/properties/[id]` property detail page
 
 ## API Routes
@@ -91,6 +94,8 @@ Property and booking tools:
 
 - The Prisma client is generated into `generated/prisma` so the project stays more reliable on Windows.
 - The seed script populates a large demo property set plus sample users and bookings.
-- The booking flow starts as pending, then the owner dashboard can confirm or
-  cancel the request.
+- The booking flow starts as pending, then the owner-only dashboard can confirm
+  or cancel the request.
+- The property detail page availability date is advanced when a new booking is
+  created for that property.
 - The homepage shows a compact auth-aware sidebar and a friendlier search header instead of the earlier sandbox wording.
