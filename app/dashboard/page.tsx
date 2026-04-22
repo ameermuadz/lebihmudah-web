@@ -2,10 +2,14 @@ import Image from "next/image";
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import BookingStatusSections from "@/components/BookingStatusSections";
 import OwnerBookingPanel from "@/components/OwnerBookingPanel";
 import { AUTH_COOKIE_NAME } from "@/lib/auth";
 import { getSessionUser } from "@/lib/services/authService";
-import { getPendingBookings } from "@/lib/services/bookingService";
+import {
+  getOwnerBookings,
+  getPendingBookings,
+} from "@/lib/services/bookingService";
 import { getPropertiesByOwner } from "@/lib/services/propertyService";
 
 export default async function DashboardPage() {
@@ -20,17 +24,40 @@ export default async function DashboardPage() {
     redirect("/");
   }
 
-  const [pendingBookings, properties] = await Promise.all([
+  const [pendingBookings, ownerBookings, properties] = await Promise.all([
     getPendingBookings(session.user.id),
+    getOwnerBookings(session.user.id),
     getPropertiesByOwner(session.user.id),
   ]);
 
-  const pendingCounts = pendingBookings.reduce<Map<string, number>>(
-    (counts, booking) => {
-      counts.set(booking.propertyId, (counts.get(booking.propertyId) ?? 0) + 1);
-      return counts;
-    },
-    new Map(),
+  const bookingCountsByProperty = ownerBookings.reduce<
+    Record<string, { pending: number; confirmed: number; cancelled: number }>
+  >((counts, booking) => {
+    if (!counts[booking.propertyId]) {
+      counts[booking.propertyId] = {
+        pending: 0,
+        confirmed: 0,
+        cancelled: 0,
+      };
+    }
+
+    if (booking.status === "PENDING") {
+      counts[booking.propertyId].pending += 1;
+    } else if (booking.status === "CONFIRMED") {
+      counts[booking.propertyId].confirmed += 1;
+    } else {
+      counts[booking.propertyId].cancelled += 1;
+    }
+
+    return counts;
+  }, {});
+
+  const confirmedBookings = ownerBookings.filter(
+    (booking) => booking.status === "CONFIRMED",
+  );
+
+  const cancelledBookings = ownerBookings.filter(
+    (booking) => booking.status === "CANCELLED",
   );
 
   return (
@@ -49,7 +76,7 @@ export default async function DashboardPage() {
             contact details.
           </p>
 
-          <div className="mt-6 grid gap-3 md:grid-cols-3">
+          <div className="mt-6 grid gap-3 md:grid-cols-2 lg:grid-cols-5">
             <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-950">
               <p className="text-xs uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">
                 Signed in as
@@ -75,6 +102,22 @@ export default async function DashboardPage() {
               </p>
               <p className="mt-2 text-lg font-semibold text-zinc-900 dark:text-zinc-100">
                 {pendingBookings.length}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-950">
+              <p className="text-xs uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">
+                Confirmed bookings
+              </p>
+              <p className="mt-2 text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+                {confirmedBookings.length}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-950">
+              <p className="text-xs uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">
+                Cancelled bookings
+              </p>
+              <p className="mt-2 text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+                {cancelledBookings.length}
               </p>
             </div>
           </div>
@@ -149,7 +192,19 @@ export default async function DashboardPage() {
                         <span className="text-zinc-500 dark:text-zinc-500">
                           Pending requests:
                         </span>{" "}
-                        {pendingCounts.get(property.id) ?? 0}
+                        {bookingCountsByProperty[property.id]?.pending ?? 0}
+                      </p>
+                      <p>
+                        <span className="text-zinc-500 dark:text-zinc-500">
+                          Confirmed:
+                        </span>{" "}
+                        {bookingCountsByProperty[property.id]?.confirmed ?? 0}
+                      </p>
+                      <p>
+                        <span className="text-zinc-500 dark:text-zinc-500">
+                          Cancelled:
+                        </span>{" "}
+                        {bookingCountsByProperty[property.id]?.cancelled ?? 0}
                       </p>
                     </div>
                   </div>
@@ -158,6 +213,13 @@ export default async function DashboardPage() {
             </div>
           )}
         </section>
+
+        <BookingStatusSections
+          title="Confirmed and cancelled bookings"
+          description="A full history of confirmed stays and cancelled requests across your properties."
+          bookings={ownerBookings}
+          visibleStatuses={["CONFIRMED", "CANCELLED"]}
+        />
 
         <OwnerBookingPanel initialRequests={pendingBookings} />
       </div>

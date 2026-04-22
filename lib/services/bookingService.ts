@@ -244,6 +244,34 @@ export async function getUserBookings(
   return bookings.map((booking) => mapBookingListItem(booking));
 }
 
+export async function getOwnerBookings(
+  ownerId: string,
+): Promise<BookingListItem[]> {
+  const bookings = await prisma.booking.findMany({
+    where: {
+      property: {
+        ownerId,
+      },
+    },
+    include: {
+      property: {
+        include: {
+          images: true,
+        },
+      },
+      user: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+    },
+    orderBy: [{ createdAt: "desc" }],
+  });
+
+  return bookings.map((booking) => mapBookingListItem(booking));
+}
+
 export async function getPendingBookings(
   ownerId: string,
 ): Promise<BookingListItem[]> {

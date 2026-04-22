@@ -65,11 +65,11 @@ Open http://localhost:3000
 ## App Routes
 
 - `/` homepage property search
-- `/bookings` booking request dashboard and cancellation history
+- `/bookings` booking request dashboard and cancellation history for regular users
 - `/chat` chat simulator
 - `/login` login form
 - `/signup` sign-up form
-- `/dashboard` owner-only property approval dashboard
+- `/dashboard` owner-only property approval and editing dashboard
 - `/properties/[id]` property detail page
 
 ## API Routes
@@ -96,6 +96,9 @@ Property and booking tools:
 - The seed script populates a large demo property set plus sample users and bookings.
 - The booking flow starts as pending, then the owner-only dashboard can confirm
   or cancel the request.
+- Owners are redirected to `/dashboard`, do not see property search or
+  bookings in the sidebar, and can edit their own property details from the
+  property detail page.
 - The property detail page availability date is advanced when a new booking is
   created for that property.
 - The homepage shows a compact auth-aware sidebar and a friendlier search header instead of the earlier sandbox wording.

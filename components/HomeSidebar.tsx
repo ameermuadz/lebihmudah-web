@@ -151,7 +151,7 @@ const ChevronRightIcon = ({ className }: { className: string }) => (
   </svg>
 );
 
-const navItems = [
+const publicNavItems = [
   {
     href: "/",
     label: "Property Search",
@@ -167,11 +167,18 @@ const navItems = [
     label: "My Bookings",
     icon: BookingsIcon,
   },
+];
+
+const ownerNavItems = [
   {
     href: "/dashboard",
     label: "Dashboard",
     icon: DashboardIcon,
-    requiresOwner: true,
+  },
+  {
+    href: "/chat",
+    label: "Chat Simulator",
+    icon: ChatIcon,
   },
 ];
 
@@ -184,6 +191,8 @@ export default function HomeSidebar({
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const visibleNavItems =
+    user?.role === "OWNER" ? ownerNavItems : publicNavItems;
 
   const userInitial = user?.name?.charAt(0).toUpperCase() ?? "G";
 
@@ -320,15 +329,7 @@ export default function HomeSidebar({
         )}
 
         <nav className="space-y-2 text-sm font-medium">
-          {navItems.map((item) => {
-            if (
-              "requiresOwner" in item &&
-              item.requiresOwner &&
-              user?.role !== "OWNER"
-            ) {
-              return null;
-            }
-
+          {visibleNavItems.map((item) => {
             const Icon = item.icon;
             const active = isActiveLink(item.href);
 

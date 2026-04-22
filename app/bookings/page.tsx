@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import BookingsClient from "@/components/BookingsClient";
 import { AUTH_COOKIE_NAME } from "@/lib/auth";
 import { getSessionUser } from "@/lib/services/authService";
@@ -8,6 +9,10 @@ import { getUserBookings } from "@/lib/services/bookingService";
 export default async function BookingsPage() {
   const sessionToken = cookies().get(AUTH_COOKIE_NAME)?.value;
   const session = await getSessionUser(sessionToken);
+
+  if (session?.user.role === "OWNER") {
+    redirect("/dashboard");
+  }
 
   return (
     <main className="min-h-screen bg-slate-100 p-4 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100 md:p-6">

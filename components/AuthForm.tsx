@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
+import type { AuthSession } from "@/lib/types";
 
 interface AuthFormProps {
   mode: "login" | "signup";
@@ -36,20 +37,26 @@ export default function AuthForm({ mode }: AuthFormProps) {
         ),
       });
 
-      const data = (await response.json().catch(() => ({}))) as {
-        error?: string;
-      };
+      const data = (await response.json().catch(() => ({}))) as
+        | { error?: string }
+        | AuthSession;
 
       if (!response.ok) {
-        throw new Error(data.error ?? "Authentication failed");
+        const errorMessage = "error" in data ? data.error : undefined;
+        throw new Error(errorMessage ?? "Authentication failed");
       }
+
+      const nextPath =
+        mode === "login" && "user" in data && data.user.role === "OWNER"
+          ? "/dashboard"
+          : "/";
 
       setSuccess(
         mode === "login"
           ? "Logged in successfully."
           : "Account created successfully.",
       );
-      router.push("/");
+      router.replace(nextPath);
       router.refresh();
     } catch (authError) {
       const reason =

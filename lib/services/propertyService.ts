@@ -7,6 +7,32 @@ import {
   SearchPayload,
 } from "@/lib/types";
 
+export class PropertyAuthorizationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "PropertyAuthorizationError";
+  }
+}
+
+export class PropertyValidationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "PropertyValidationError";
+  }
+}
+
+export interface UpdatePropertyInput {
+  title: string;
+  location: string;
+  price: number;
+  rooms: number;
+  petsAllowed: boolean;
+  description: string;
+  availabilityDate: string;
+  amenities: string[];
+  rules: string[];
+}
+
 type PropertyWithRelations = {
   id: string;
   title: string;
@@ -41,6 +67,21 @@ type PropertyWithRelations = {
 
 const bySortOrder = <T extends { sortOrder: number }>(a: T, b: T) =>
   a.sortOrder - b.sortOrder;
+
+const isoDatePattern = /^\d{4}-\d{2}-\d{2}$/;
+
+const isValidIsoDate = (value: string) => {
+  if (!isoDatePattern.test(value)) {
+    return false;
+  }
+
+  const parsedDate = new Date(`${value}T00:00:00`);
+
+  return !Number.isNaN(parsedDate.getTime());
+};
+
+const normalizeList = (values: string[]) =>
+  values.map((value) => value.trim()).filter(Boolean);
 
 const mapSummary = (property: PropertyWithRelations): Property => ({
   id: property.id,
@@ -144,11 +185,6 @@ export async function getPropertyDetails(
         },
       },
       bookings: {
-        where: {
-          status: {
-            not: "CANCELLED",
-          },
-        },
         include: {
           user: {
             select: {
@@ -168,7 +204,9 @@ export async function getPropertyDetails(
   return mapDetails(property);
 }
 
-export async function getPropertiesByOwner(ownerId: string) {
+export async function getPropertiesByOwner(
+  ownerId: string,
+): Promise<Array<Property & { availabilityDate: string }>> {
   const properties = await prisma.property.findMany({
     where: { ownerId },
     include: {
@@ -192,4 +230,128 @@ export async function getPropertiesByOwner(ownerId: string) {
     ...mapSummary(property),
     availabilityDate: property.availabilityDate,
   }));
+}
+
+export async function updatePropertyByOwner(input: {
+  ownerId: string;
+  propertyId: string;
+  data: UpdatePropertyInput;
+}): Promise<PropertyDetails | null> {
+  const existingProperty = await prisma.property.findUnique({
+    where: { id: input.propertyId },
+    select: {
+      id: true,
+      ownerId: true,
+    },
+  });
+
+  if (!existingProperty) {
+    return null;
+  }
+
+  if (existingProperty.ownerId !== input.ownerId) {
+    throw new PropertyAuthorizationError(
+      "You can only edit properties you own",
+    );
+  }
+
+  const title = input.data.title.trim();
+  const location = input.data.location.trim();
+  const description = input.data.description.trim();
+  const availabilityDate = input.data.availabilityDate.trim();
+  const amenities = normalizeList(input.data.amenities);
+  const rules = normalizeList(input.data.rules);
+
+  if (!title || !location || !description) {
+    throw new PropertyValidationError(
+      "Title, location, and description are required",
+    );
+  }
+
+  if (!Number.isFinite(input.data.price) || input.data.price <= 0) {
+    throw new PropertyValidationError("Price must be a positive number");
+  }
+
+  if (!Number.isInteger(input.data.rooms) || input.data.rooms < 1) {
+    throw new PropertyValidationError("Rooms must be at least 1");
+  }
+
+  if (!isValidIsoDate(availabilityDate)) {
+    throw new PropertyValidationError(
+      "availabilityDate must use the YYYY-MM-DD format",
+    );
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.property.update({
+      where: { id: existingProperty.id },
+      data: {
+        title,
+        location,
+        price: Math.floor(input.data.price),
+        rooms: input.data.rooms,
+        petsAllowed: input.data.petsAllowed,
+        description,
+        availabilityDate,
+      },
+    });
+
+    await tx.propertyAmenity.deleteMany({
+      where: { propertyId: existingProperty.id },
+    });
+
+    if (amenities.length > 0) {
+      await tx.propertyAmenity.createMany({
+        data: amenities.map((value, index) => ({
+          propertyId: existingProperty.id,
+          value,
+          sortOrder: index,
+        })),
+      });
+    }
+
+    await tx.propertyRule.deleteMany({
+      where: { propertyId: existingProperty.id },
+    });
+
+    if (rules.length > 0) {
+      await tx.propertyRule.createMany({
+        data: rules.map((value, index) => ({
+          propertyId: existingProperty.id,
+          value,
+          sortOrder: index,
+        })),
+      });
+    }
+  });
+
+  const updatedProperty = await prisma.property.findUnique({
+    where: { id: existingProperty.id },
+    include: {
+      images: true,
+      amenities: true,
+      rules: true,
+      owner: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          role: true,
+        },
+      },
+      bookings: {
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  return updatedProperty ? mapDetails(updatedProperty) : null;
 }
