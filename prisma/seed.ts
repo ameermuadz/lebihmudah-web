@@ -1,7 +1,16 @@
+import { existsSync } from "node:fs";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 import { PrismaClient } from "../generated/prisma";
 import { hashPassword } from "../lib/auth";
 
 const prisma = new PrismaClient();
+
+const SOURCE_YEAR = 2024;
+const demoYear = new Date().getFullYear();
+const yearOffset = Math.max(0, demoYear - SOURCE_YEAR);
+
+type CsvRecord = Record<string, string>;
 
 type SeedProperty = {
   id: string;
@@ -10,152 +19,147 @@ type SeedProperty = {
   price: number;
   rooms: number;
   petsAllowed: boolean;
-  images: string[];
   ownerId: string;
   description: string;
+  availabilityDate: string;
+  imageUrl: string;
   amenities: string[];
   rules: string[];
-  availabilityDate: string;
 };
 
-const baseSeedProperties: SeedProperty[] = [
-  {
-    id: "p_101",
-    title: "Cozy 2-Room near UM",
-    location: "Universiti Malaya",
-    price: 1200,
-    rooms: 2,
-    petsAllowed: true,
-    images: ["/mock1.svg"],
-    ownerId: "o_555",
-    description: "Perfect for students. 5 mins walk to campus.",
-    amenities: ["Aircon", "Fridge"],
-    rules: ["No loud music after 10PM"],
-    availabilityDate: "2026-05-01",
-  },
-  {
-    id: "p_102",
-    title: "Studio Loft in Bangsar",
-    location: "Bangsar",
-    price: 2100,
-    rooms: 1,
-    petsAllowed: false,
-    images: ["/mock2.svg"],
-    ownerId: "o_321",
-    description: "Modern loft with great cafes downstairs.",
-    amenities: ["WiFi", "Washer", "Aircon"],
-    rules: ["No smoking indoors", "Max 2 occupants"],
-    availabilityDate: "2026-06-15",
-  },
-  {
-    id: "p_103",
-    title: "Family Apartment near LRT",
-    location: "PJ Section 13",
-    price: 1800,
-    rooms: 3,
-    petsAllowed: true,
-    images: ["/mock3.svg"],
-    ownerId: "o_222",
-    description: "Large unit suitable for small families.",
-    amenities: ["Water Heater", "Fridge", "Parking"],
-    rules: ["No parties", "Keep common area clean"],
-    availabilityDate: "2026-05-20",
-  },
-  {
-    id: "p_104",
-    title: "Budget Room in Cheras",
-    location: "Cheras",
-    price: 850,
-    rooms: 1,
-    petsAllowed: false,
-    images: ["/mock4.svg"],
-    ownerId: "o_198",
-    description: "Affordable room with quick MRT access.",
-    amenities: ["Fan", "Shared Kitchen"],
-    rules: ["No pets", "Quiet hours after 11PM"],
-    availabilityDate: "2026-04-30",
-  },
-  {
-    id: "p_105",
-    title: "Pet-Friendly Condo in Subang",
-    location: "Subang Jaya",
-    price: 2600,
-    rooms: 2,
-    petsAllowed: true,
-    images: ["/mock5.svg"],
-    ownerId: "o_777",
-    description: "Condo with balcony and nearby park.",
-    amenities: ["Gym", "Pool", "Washer", "Dryer"],
-    rules: ["Register pets with management", "No renovations"],
-    availabilityDate: "2026-07-01",
-  },
-];
-
-const locations = [
-  "Universiti Malaya",
-  "Bangsar",
-  "PJ Section 13",
-  "Cheras",
-  "Subang Jaya",
-  "Setapak",
-  "Mont Kiara",
-  "Shah Alam",
-  "Kepong",
-  "Puchong",
-  "Damansara",
-  "KL Sentral",
-];
-
-const titlePrefixes = [
-  "Modern Studio",
-  "Cozy Suite",
-  "City Apartment",
-  "Family Condo",
-  "Budget Unit",
-  "Garden Residence",
-  "Loft",
-  "Urban Home",
-];
-
-const amenityPool = [
-  "Aircon",
-  "Fridge",
-  "WiFi",
-  "Water Heater",
-  "Parking",
-  "Washing Machine",
-  "Gym",
-  "Pool",
-  "Study Desk",
-  "Microwave",
-  "Balcony",
-  "Wardrobe",
-];
-
-const rulePool = [
-  "No smoking indoors",
-  "No loud music after 10PM",
-  "Keep shared areas clean",
-  "Maximum 3 occupants",
-  "No short-term subletting",
-  "Pets must be registered",
-  "Quiet hours after 11PM",
-  "No parties",
-];
-
-const mockImages = [
-  "/mock1.svg",
-  "/mock2.svg",
-  "/mock3.svg",
-  "/mock4.svg",
-  "/mock5.svg",
-];
-
-const buildAvailabilityDate = (offset: number) => {
-  const month = ((offset % 12) + 1).toString().padStart(2, "0");
-  const day = ((offset % 28) + 1).toString().padStart(2, "0");
-  return `2026-${month}-${day}`;
+type SeedUser = {
+  name: string;
+  email: string;
+  password: string;
 };
+
+type SeedBooking = {
+  propertyId: string;
+  userEmail: string;
+  moveInDate: string;
+  moveOutDate: string;
+  status: string;
+};
+
+const normalizeHeader = (value: string) => value.replace(/^\uFEFF/, "").trim();
+
+const parseCsv = (content: string): CsvRecord[] => {
+  const rows: string[][] = [];
+  let currentRow: string[] = [];
+  let currentField = "";
+  let isInsideQuotes = false;
+
+  for (let index = 0; index < content.length; index += 1) {
+    const character = content[index];
+    const nextCharacter = content[index + 1];
+
+    if (isInsideQuotes) {
+      if (character === '"') {
+        if (nextCharacter === '"') {
+          currentField += '"';
+          index += 1;
+        } else {
+          isInsideQuotes = false;
+        }
+      } else {
+        currentField += character;
+      }
+
+      continue;
+    }
+
+    if (character === '"') {
+      isInsideQuotes = true;
+      continue;
+    }
+
+    if (character === ",") {
+      currentRow.push(currentField);
+      currentField = "";
+      continue;
+    }
+
+    if (character === "\r") {
+      continue;
+    }
+
+    if (character === "\n") {
+      currentRow.push(currentField);
+      if (currentRow.some((cell) => cell.trim().length > 0)) {
+        rows.push(currentRow);
+      }
+      currentRow = [];
+      currentField = "";
+      continue;
+    }
+
+    currentField += character;
+  }
+
+  if (currentField.length > 0 || currentRow.length > 0) {
+    currentRow.push(currentField);
+    if (currentRow.some((cell) => cell.trim().length > 0)) {
+      rows.push(currentRow);
+    }
+  }
+
+  const [headerRow, ...dataRows] = rows;
+
+  if (!headerRow) {
+    throw new Error("CSV file is empty");
+  }
+
+  return dataRows.map((cells) => {
+    const record: CsvRecord = {};
+
+    headerRow.forEach((columnName, index) => {
+      record[normalizeHeader(columnName)] = (cells[index] ?? "").trim();
+    });
+
+    return record;
+  });
+};
+
+const resolveCsvPath = (fileName: string) => {
+  const candidates = [
+    path.resolve(process.cwd(), fileName),
+    path.resolve(process.cwd(), "..", fileName),
+    path.resolve(process.cwd(), "..", "..", fileName),
+  ];
+
+  const resolvedPath = candidates.find((candidate) => existsSync(candidate));
+
+  if (!resolvedPath) {
+    throw new Error(`Unable to locate ${fileName}`);
+  }
+
+  return resolvedPath;
+};
+
+const readCsvFile = async (fileName: string) => {
+  const filePath = resolveCsvPath(fileName);
+  const content = await readFile(filePath, "utf8");
+
+  return parseCsv(content);
+};
+
+const parseBoolean = (value: string) => value.trim().toLowerCase() === "true";
+
+const parseNumber = (value: string) => {
+  const parsed = Number(value);
+
+  if (!Number.isFinite(parsed)) {
+    throw new Error(`Invalid numeric value: ${value}`);
+  }
+
+  return parsed;
+};
+
+const splitList = (value: string) =>
+  value
+    .split(";")
+    .map((item) => item.trim())
+    .filter(Boolean);
 
 const toIsoDate = (date: Date) => {
   const year = date.getFullYear();
@@ -165,69 +169,45 @@ const toIsoDate = (date: Date) => {
   return `${year}-${month}-${day}`;
 };
 
-const addDays = (isoDate: string, days: number) => {
-  const date = new Date(`${isoDate}T00:00:00`);
-  date.setDate(date.getDate() + days);
-  return toIsoDate(date);
+const shiftDateByYears = (value: string, offset: number) => {
+  const parsedDate = new Date(`${value}T00:00:00`);
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    throw new Error(`Invalid date value: ${value}`);
+  }
+
+  parsedDate.setFullYear(parsedDate.getFullYear() + offset);
+  return toIsoDate(parsedDate);
 };
 
-const generatedSeedProperties: SeedProperty[] = Array.from(
-  { length: 240 },
-  (_, index) => {
-    const propertyNumber = 106 + index;
-    const location = locations[index % locations.length];
-    const rooms = (index % 4) + 1;
-    const petsAllowed = index % 3 !== 0;
-    const price = 750 + ((index * 67) % 2600);
-    const ownerId = `o_${900 + propertyNumber}`;
+const normalizeImageUrl = (value: string) => {
+  const trimmed = value.trim();
 
-    const amenities = [
-      amenityPool[index % amenityPool.length],
-      amenityPool[(index + 3) % amenityPool.length],
-      amenityPool[(index + 7) % amenityPool.length],
-    ];
+  if (!trimmed) {
+    return "/mock1.svg";
+  }
 
-    const rules = [
-      rulePool[index % rulePool.length],
-      rulePool[(index + 4) % rulePool.length],
-    ];
+  const match = trimmed.match(/mock(\d+)\.(?:jpg|jpeg|png|svg|webp)$/i);
 
-    return {
-      id: `p_${propertyNumber}`,
-      title: `${titlePrefixes[index % titlePrefixes.length]} ${rooms}-Room in ${location}`,
-      location,
-      price,
-      rooms,
-      petsAllowed,
-      images: [mockImages[index % mockImages.length]],
-      ownerId,
-      description: `Comfortable ${rooms}-room unit in ${location} suitable for renters looking for quick access to transit and daily essentials.`,
-      amenities,
-      rules,
-      availabilityDate: buildAvailabilityDate(index + 1),
-    };
-  },
-);
+  if (!match) {
+    return trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
+  }
 
-const seedProperties: SeedProperty[] = [
-  ...baseSeedProperties,
-  ...generatedSeedProperties,
-];
+  const imageNumber = Number(match[1]);
+  const normalizedImageNumber = ((imageNumber - 1) % 5) + 1;
 
-const seedUsers = [
-  {
-    name: "Aiman Rahman",
-    email: "aiman@example.com",
-    password: "password123",
-  },
-  {
-    name: "Sara Lee",
-    email: "sara@example.com",
-    password: "password123",
-  },
-];
+  return `/mock${normalizedImageNumber}.svg`;
+};
+
+const normalizeStatus = (value: string) => value.trim().toUpperCase();
 
 async function main() {
+  const [propertyRows, userRows, bookingRows] = await Promise.all([
+    readCsvFile("properties.csv"),
+    readCsvFile("users.csv"),
+    readCsvFile("bookings.csv"),
+  ]);
+
   await prisma.session.deleteMany();
   await prisma.ownerMessage.deleteMany();
   await prisma.booking.deleteMany();
@@ -237,13 +217,19 @@ async function main() {
   await prisma.propertyImage.deleteMany();
   await prisma.property.deleteMany();
 
-  const createdUsers = [] as Array<{ id: string; name: string; email: string }>;
+  const createdUsers: Array<{ id: string; name: string; email: string }> = [];
 
-  for (const user of seedUsers) {
+  for (const userRow of userRows) {
+    const user: SeedUser = {
+      name: userRow.name,
+      email: userRow.email,
+      password: userRow.password,
+    };
+
     const createdUser = await prisma.user.create({
       data: {
         name: user.name,
-        email: user.email,
+        email: user.email.trim().toLowerCase(),
         passwordHash: hashPassword(user.password),
       },
     });
@@ -251,26 +237,52 @@ async function main() {
     createdUsers.push(createdUser);
   }
 
-  for (const property of seedProperties) {
-    const { images, amenities, rules, ...baseProperty } = property;
+  for (const propertyRow of propertyRows) {
+    const property: SeedProperty = {
+      id: propertyRow.id,
+      title: propertyRow.title,
+      location: propertyRow.location,
+      price: parseNumber(propertyRow.price),
+      rooms: parseNumber(propertyRow.rooms),
+      petsAllowed: parseBoolean(propertyRow.petsAllowed),
+      ownerId: propertyRow.ownerId,
+      description: propertyRow.description,
+      availabilityDate: shiftDateByYears(
+        propertyRow.availabilityDate,
+        yearOffset,
+      ),
+      imageUrl: normalizeImageUrl(propertyRow.imageUrl),
+      amenities: splitList(propertyRow.amenities),
+      rules: splitList(propertyRow.rules),
+    };
 
     await prisma.property.create({
       data: {
-        ...baseProperty,
+        id: property.id,
+        title: property.title,
+        location: property.location,
+        price: property.price,
+        rooms: property.rooms,
+        petsAllowed: property.petsAllowed,
+        ownerId: property.ownerId,
+        description: property.description,
+        availabilityDate: property.availabilityDate,
         images: {
-          create: images.map((url, index) => ({
-            url,
-            sortOrder: index,
-          })),
+          create: [
+            {
+              url: property.imageUrl,
+              sortOrder: 0,
+            },
+          ],
         },
         amenities: {
-          create: amenities.map((value, index) => ({
+          create: property.amenities.map((value, index) => ({
             value,
             sortOrder: index,
           })),
         },
         rules: {
-          create: rules.map((value, index) => ({
+          create: property.rules.map((value, index) => ({
             value,
             sortOrder: index,
           })),
@@ -279,21 +291,41 @@ async function main() {
     });
   }
 
-  const bookedPropertyIds = ["p_101", "p_102", "p_105"];
+  const userByEmail = new Map(
+    createdUsers.map((user) => [user.email.toLowerCase(), user]),
+  );
+
+  const seedBookings: SeedBooking[] = bookingRows.map((bookingRow) => ({
+    propertyId: bookingRow.propertyId,
+    userEmail: bookingRow.userEmail,
+    moveInDate: shiftDateByYears(bookingRow.moveInDate, yearOffset),
+    moveOutDate: shiftDateByYears(bookingRow.moveOutDate, yearOffset),
+    status: normalizeStatus(bookingRow.status),
+  }));
 
   await prisma.booking.createMany({
-    data: bookedPropertyIds.map((propertyId, index) => ({
-      propertyId,
-      userId: createdUsers[index % createdUsers.length].id,
-      userContact: createdUsers[index % createdUsers.length].email,
-      moveInDate: `2026-${String(index + 5).padStart(2, "0")}-01`,
-      moveOutDate: addDays(`2026-${String(index + 5).padStart(2, "0")}-01`, 4),
-      status: "CONFIRMED",
-    })),
+    data: seedBookings.map((booking) => {
+      const user = userByEmail.get(booking.userEmail.trim().toLowerCase());
+
+      if (!user) {
+        throw new Error(
+          `Booking references unknown user email: ${booking.userEmail}`,
+        );
+      }
+
+      return {
+        propertyId: booking.propertyId,
+        userId: user.id,
+        userContact: user.email,
+        moveInDate: booking.moveInDate,
+        moveOutDate: booking.moveOutDate,
+        status: booking.status,
+      };
+    }),
   });
 
   console.log(
-    `Seeded ${seedProperties.length} properties, ${createdUsers.length} users, and ${bookedPropertyIds.length} bookings`,
+    `Seeded ${propertyRows.length} properties, ${createdUsers.length} users, and ${seedBookings.length} bookings from CSV files`,
   );
 }
 
