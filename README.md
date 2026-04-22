@@ -7,7 +7,8 @@ LebihMudah.my is a Next.js 14 property search and booking demo backed by Prisma 
 - Search properties by location, budget, room count, and pet policy.
 - Open a property detail page at `/properties/[id]`.
 - Sign up, log in, and log out with cookie-based sessions.
-- Book a property from the website when signed in.
+- Request a property from the website when signed in, then track pending,
+  confirmed, and cancelled states.
 - Use the owner dashboard and chat simulator pages.
 - Switch between light and dark theme with the icon button in the top-right corner.
 - See the first 10 properties immediately on the homepage.
@@ -61,10 +62,11 @@ Open http://localhost:3000
 ## App Routes
 
 - `/` homepage property search
+- `/bookings` booking request dashboard and cancellation history
 - `/chat` chat simulator
 - `/login` login form
 - `/signup` sign-up form
-- `/owner-dashboard` owner dashboard
+- `/owner-dashboard` owner approvals and owner dashboard
 - `/properties/[id]` property detail page
 
 ## API Routes
@@ -89,4 +91,6 @@ Property and booking tools:
 
 - The Prisma client is generated into `generated/prisma` so the project stays more reliable on Windows.
 - The seed script populates a large demo property set plus sample users and bookings.
+- The booking flow starts as pending, then the owner dashboard can confirm or
+  cancel the request.
 - The homepage shows a compact auth-aware sidebar and a friendlier search header instead of the earlier sandbox wording.

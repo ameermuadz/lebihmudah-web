@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { BookingListItem, BookingStatus } from "@/lib/types";
 
 export class BookingRangeError extends Error {
   constructor(message: string) {
@@ -11,6 +12,20 @@ export class BookingConflictError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "BookingConflictError";
+  }
+}
+
+export class BookingCancellationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "BookingCancellationError";
+  }
+}
+
+export class BookingTransitionError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "BookingTransitionError";
   }
 }
 
@@ -28,7 +43,7 @@ export interface BookingResult {
   userContact: string;
   moveInDate: string;
   moveOutDate: string;
-  status: string;
+  status: BookingStatus;
   createdAt: string;
   userId?: string | null;
   userName?: string | null;
@@ -56,6 +71,48 @@ const isValidIsoDate = (value: string) => {
 
 const compareIsoDates = (left: string, right: string) =>
   left.localeCompare(right);
+
+type BookingWithRelations = {
+  id: string;
+  propertyId: string;
+  userId: string | null;
+  userContact: string;
+  moveInDate: string;
+  moveOutDate: string;
+  status: string;
+  createdAt: Date;
+  property: {
+    id: string;
+    title: string;
+    location: string;
+    images: Array<{ url: string; sortOrder: number }>;
+  };
+  user: { id: string; name: string } | null;
+};
+
+const sortByOrder = <T extends { sortOrder: number }>(a: T, b: T) =>
+  a.sortOrder - b.sortOrder;
+
+const getPrimaryImageUrl = (
+  images: Array<{ url: string; sortOrder: number }>,
+) => [...images].sort(sortByOrder)[0]?.url ?? "/mock1.svg";
+
+const mapBookingListItem = (
+  booking: BookingWithRelations,
+): BookingListItem => ({
+  confirmationId: booking.id,
+  propertyId: booking.propertyId,
+  propertyTitle: booking.property.title,
+  propertyLocation: booking.property.location,
+  propertyImage: getPrimaryImageUrl(booking.property.images),
+  userContact: booking.userContact,
+  moveInDate: booking.moveInDate,
+  moveOutDate: booking.moveOutDate,
+  status: booking.status as BookingStatus,
+  createdAt: booking.createdAt.toISOString(),
+  userId: booking.userId,
+  userName: booking.user?.name ?? null,
+});
 
 export async function createBooking(
   input: CreateBookingInput,
@@ -92,7 +149,7 @@ export async function createBooking(
     where: {
       propertyId: input.propertyId,
       status: {
-        not: "CANCELLED",
+        in: ["PENDING", "CONFIRMED"],
       },
       moveInDate: {
         lt: moveOutDate,
@@ -120,7 +177,7 @@ export async function createBooking(
       userContact: input.userContact,
       moveInDate,
       moveOutDate,
-      status: "CONFIRMED",
+      status: "PENDING",
     },
     include: {
       user: true,
@@ -133,9 +190,206 @@ export async function createBooking(
     userContact: booking.userContact,
     moveInDate: booking.moveInDate,
     moveOutDate: booking.moveOutDate,
-    status: booking.status,
+    status: booking.status as BookingStatus,
     createdAt: booking.createdAt.toISOString(),
     userId: booking.userId,
     userName: booking.user?.name ?? null,
   };
+}
+
+export async function getUserBookings(
+  userId: string,
+): Promise<BookingListItem[]> {
+  const bookings = await prisma.booking.findMany({
+    where: { userId },
+    include: {
+      property: {
+        include: {
+          images: true,
+        },
+      },
+      user: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+    },
+    orderBy: [{ moveInDate: "asc" }, { createdAt: "desc" }],
+  });
+
+  return bookings.map((booking) => mapBookingListItem(booking));
+}
+
+export async function getPendingBookings(): Promise<BookingListItem[]> {
+  const bookings = await prisma.booking.findMany({
+    where: {
+      status: "PENDING",
+    },
+    include: {
+      property: {
+        include: {
+          images: true,
+        },
+      },
+      user: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+    },
+    orderBy: [{ createdAt: "asc" }],
+  });
+
+  return bookings.map((booking) => mapBookingListItem(booking));
+}
+
+export async function updateBookingStatus(input: {
+  bookingId: string;
+  status: Extract<BookingStatus, "CONFIRMED" | "CANCELLED">;
+}): Promise<BookingListItem | null> {
+  const booking = await prisma.booking.findUnique({
+    where: { id: input.bookingId },
+    include: {
+      property: {
+        include: {
+          images: true,
+        },
+      },
+      user: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+    },
+  });
+
+  if (!booking) {
+    return null;
+  }
+
+  if (booking.status === input.status) {
+    throw new BookingTransitionError(
+      `Booking is already ${input.status.toLowerCase()}`,
+    );
+  }
+
+  if (booking.status === "CANCELLED") {
+    throw new BookingTransitionError("Cancelled bookings cannot be changed");
+  }
+
+  if (booking.status !== "PENDING" && input.status === "CONFIRMED") {
+    throw new BookingTransitionError("Only pending bookings can be confirmed");
+  }
+
+  if (input.status === "CONFIRMED") {
+    const conflictingBooking = await prisma.booking.findFirst({
+      where: {
+        propertyId: booking.propertyId,
+        id: {
+          not: booking.id,
+        },
+        status: {
+          in: ["PENDING", "CONFIRMED"],
+        },
+        moveInDate: {
+          lt: booking.moveOutDate,
+        },
+        moveOutDate: {
+          gt: booking.moveInDate,
+        },
+      },
+      select: {
+        moveInDate: true,
+        moveOutDate: true,
+      },
+    });
+
+    if (conflictingBooking) {
+      throw new BookingConflictError(
+        `This property is already reserved from ${conflictingBooking.moveInDate} to ${conflictingBooking.moveOutDate}.`,
+      );
+    }
+  }
+
+  const updatedBooking = await prisma.booking.update({
+    where: { id: booking.id },
+    data: { status: input.status },
+    include: {
+      property: {
+        include: {
+          images: true,
+        },
+      },
+      user: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+    },
+  });
+
+  return mapBookingListItem(updatedBooking);
+}
+
+export async function cancelBooking(input: {
+  bookingId: string;
+  userId: string;
+}): Promise<BookingListItem | null> {
+  const booking = await prisma.booking.findFirst({
+    where: {
+      id: input.bookingId,
+      userId: input.userId,
+    },
+    include: {
+      property: {
+        include: {
+          images: true,
+        },
+      },
+      user: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+    },
+  });
+
+  if (!booking) {
+    return null;
+  }
+
+  if (booking.status === "CANCELLED") {
+    throw new BookingCancellationError("This booking is already cancelled");
+  }
+
+  const todayIso = toIsoDate(new Date());
+
+  if (compareIsoDates(booking.moveOutDate, todayIso) <= 0) {
+    throw new BookingCancellationError("Past bookings cannot be cancelled");
+  }
+
+  const updatedBooking = await prisma.booking.update({
+    where: { id: booking.id },
+    data: { status: "CANCELLED" },
+    include: {
+      property: {
+        include: {
+          images: true,
+        },
+      },
+      user: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+    },
+  });
+
+  return mapBookingListItem(updatedBooking);
 }

@@ -73,7 +73,31 @@ export interface BookingConfirmation {
   userContact: string;
   moveInDate: string;
   moveOutDate: string;
-  status: string;
+  status: BookingStatus;
+  createdAt: string;
+  userId?: string | null;
+  userName?: string | null;
+}
+
+export type BookingStatus = "PENDING" | "CONFIRMED" | "CANCELLED";
+
+export type BookingTimelineCategory =
+  | "pending"
+  | "upcoming"
+  | "current"
+  | "past"
+  | "cancelled";
+
+export interface BookingListItem {
+  confirmationId: string;
+  propertyId: string;
+  propertyTitle: string;
+  propertyLocation: string;
+  propertyImage: string;
+  userContact: string;
+  moveInDate: string;
+  moveOutDate: string;
+  status: BookingStatus;
   createdAt: string;
   userId?: string | null;
   userName?: string | null;

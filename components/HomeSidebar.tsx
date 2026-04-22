@@ -45,6 +45,25 @@ const ChatIcon = ({ className }: { className: string }) => (
   </svg>
 );
 
+const BookingsIcon = ({ className }: { className: string }) => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+  >
+    <rect x="4" y="5" width="16" height="15" rx="3" />
+    <path d="M8 3.5v3" />
+    <path d="M16 3.5v3" />
+    <path d="M4 9.5h16" />
+    <path d="M8 13h8" />
+    <path d="M8 16h5" />
+  </svg>
+);
+
 const DashboardIcon = ({ className }: { className: string }) => (
   <svg
     viewBox="0 0 24 24"
@@ -147,6 +166,11 @@ const navItems = [
     href: "/chat",
     label: "Chat Simulator",
     icon: ChatIcon,
+  },
+  {
+    href: "/bookings",
+    label: "My Bookings",
+    icon: BookingsIcon,
   },
   {
     href: "/owner-dashboard",

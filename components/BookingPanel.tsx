@@ -97,7 +97,9 @@ export default function BookingPanel({
       setMoveInDate("");
       setMoveOutDate("");
       setStatus(
-        `Booking confirmed for ${propertyTitle} from ${formatDateLabel(moveInDate)} to ${formatDateLabel(moveOutDate)}. Confirmation ID: ${data.confirmationId}`,
+        data.status === "PENDING"
+          ? `Request submitted for ${propertyTitle} from ${formatDateLabel(moveInDate)} to ${formatDateLabel(moveOutDate)}. It is now pending owner approval. Request ID: ${data.confirmationId}`
+          : `Booking confirmed for ${propertyTitle} from ${formatDateLabel(moveInDate)} to ${formatDateLabel(moveOutDate)}. Confirmation ID: ${data.confirmationId}`,
       );
     } catch (bookingError) {
       const reason =
@@ -112,12 +114,12 @@ export default function BookingPanel({
     <section className="space-y-4 rounded-2xl border border-zinc-300 bg-white p-6 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
       <div>
         <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
-          Book this property
+          Request this property
         </h2>
         <p className="text-sm text-zinc-600 dark:text-zinc-400">
           {user
             ? `Signed in as ${user.name} (${user.email})`
-            : "Log in to book this property from the web UI."}
+            : "Log in to request this property from the web UI."}
         </p>
         <p className="mt-1 text-xs uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">
           Available from {formatDateLabel(availabilityDate)}
@@ -156,7 +158,8 @@ export default function BookingPanel({
             }}
           />
           <p className="text-xs text-zinc-500 dark:text-zinc-400">
-            Choose your full stay in one calendar. Move-out is the checkout day.
+            Choose your stay in one calendar. Requests begin as pending until
+            the owner confirms or cancels them.
           </p>
           {moveInDate && moveOutDate ? (
             <p className="text-sm text-zinc-700 dark:text-zinc-300">
@@ -170,7 +173,7 @@ export default function BookingPanel({
             disabled={isLoading || !moveInDate || !moveOutDate}
             className="w-full rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:bg-zinc-400 dark:disabled:bg-zinc-700"
           >
-            {isLoading ? "Booking..." : "Confirm Booking"}
+            {isLoading ? "Submitting request..." : "Request booking"}
           </button>
         </div>
       )}

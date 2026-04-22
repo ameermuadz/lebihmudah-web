@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import {
   BookingConfirmation,
+  BookingStatus,
   Property,
   PropertyDetails,
   SearchPayload,
@@ -61,7 +62,7 @@ const mapDetails = (property: PropertyWithRelations): PropertyDetails => ({
       userContact: booking.userContact,
       moveInDate: booking.moveInDate,
       moveOutDate: booking.moveOutDate,
-      status: booking.status,
+      status: booking.status as BookingStatus,
       createdAt: booking.createdAt.toISOString(),
       userId: booking.userId,
       userName: booking.user?.name ?? null,

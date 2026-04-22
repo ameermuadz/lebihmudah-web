@@ -4,12 +4,13 @@ import { useEffect, useRef, useState } from "react";
 import type { BookingConfirmation } from "@/lib/types";
 
 type BookingOwnership = "me" | "other";
+type BookingState = "pending" | BookingOwnership;
 
 type CalendarCell = {
   date: Date;
   isoDate: string;
   dayNumber: number;
-  bookingState: BookingOwnership | null;
+  bookingState: BookingState | null;
   isSelectedStart: boolean;
   isSelectedEnd: boolean;
   isInSelectedRange: boolean;
@@ -178,7 +179,18 @@ export default function DateRangePicker({
     };
   }, []);
 
-  const getBookingState = (isoDate: string): BookingOwnership | null => {
+  const getBookingState = (isoDate: string): BookingState | null => {
+    const pendingBooking = bookings.find(
+      (booking) =>
+        booking.status === "PENDING" &&
+        isoDate >= booking.moveInDate &&
+        isoDate < booking.moveOutDate,
+    );
+
+    if (pendingBooking) {
+      return "pending";
+    }
+
     const ownedBooking = bookings.find(
       (booking) =>
         booking.status === "CONFIRMED" &&
@@ -270,11 +282,19 @@ export default function DateRangePicker({
     }
 
     if (cell.bookingState && hasSelection) {
+      if (cell.bookingState === "pending") {
+        return "bg-amber-100 text-amber-950 ring-2 ring-blue-500 ring-offset-1 ring-offset-white dark:bg-amber-950/70 dark:text-amber-100 dark:ring-offset-zinc-950";
+      }
+
       return `${
         cell.bookingState === "me"
           ? "bg-emerald-100 text-emerald-950 dark:bg-emerald-950/70 dark:text-emerald-100"
           : "bg-rose-100 text-rose-950 dark:bg-rose-950/70 dark:text-rose-100"
       } ring-2 ring-blue-500 ring-offset-1 ring-offset-white dark:ring-offset-zinc-950`;
+    }
+
+    if (cell.bookingState === "pending") {
+      return "bg-amber-500 text-white shadow-md shadow-amber-500/20 hover:bg-amber-400";
     }
 
     if (cell.isSelectedStart || cell.isSelectedEnd) {
@@ -369,6 +389,7 @@ export default function DateRangePicker({
 
           <div className="mt-4 flex flex-wrap gap-2 text-xs font-medium text-zinc-700 dark:text-zinc-200">
             <LegendItem colorClassName="bg-blue-500" label="You are choosing" />
+            <LegendItem colorClassName="bg-amber-500" label="Pending request" />
             <LegendItem colorClassName="bg-emerald-500" label="Booked by you" />
             <LegendItem colorClassName="bg-rose-500" label="Booked by others" />
           </div>
@@ -392,11 +413,13 @@ export default function DateRangePicker({
               }
 
               const bookingStateLabel =
-                calendarCell.bookingState === "me"
-                  ? "Booked by you"
-                  : calendarCell.bookingState === "other"
-                    ? "Booked by another guest"
-                    : null;
+                calendarCell.bookingState === "pending"
+                  ? "Pending booking request"
+                  : calendarCell.bookingState === "me"
+                    ? "Booked by you"
+                    : calendarCell.bookingState === "other"
+                      ? "Booked by another guest"
+                      : null;
               const selectedStateLabel = calendarCell.isSelectedStart
                 ? "Selected move-in date"
                 : calendarCell.isSelectedEnd
@@ -431,9 +454,11 @@ export default function DateRangePicker({
                   {calendarCell.bookingState ? (
                     <span
                       className={`absolute bottom-1 right-1 h-1.5 w-1.5 rounded-full ${
-                        calendarCell.bookingState === "me"
-                          ? "bg-emerald-100"
-                          : "bg-rose-100"
+                        calendarCell.bookingState === "pending"
+                          ? "bg-amber-100"
+                          : calendarCell.bookingState === "me"
+                            ? "bg-emerald-100"
+                            : "bg-rose-100"
                       }`}
                       aria-hidden="true"
                     />
