@@ -1,6 +1,6 @@
 # LebihMudah.my Property Platform
 
-LebihMudah.my is a Next.js 14 property search and booking demo backed by Prisma and SQLite. It includes authentication, real API routes, seeded demo data, and a user-friendly browsing experience for properties.
+LebihMudah.my is a Next.js 14 property search and booking demo backed by Prisma and SQLite. It includes authentication, real API routes, seeded demo data, and a user-friendly browsing experience for properties. The `/chat` page is a platform chatbot preview only for now.
 
 ## What You Can Do
 
@@ -10,7 +10,7 @@ LebihMudah.my is a Next.js 14 property search and booking demo backed by Prisma 
 - Request a property from the website when signed in, then track pending,
   confirmed, and cancelled states.
 - Owners can open the dashboard at `/dashboard` to approve bookings on their
-  own properties, and everyone can use the chat simulator page.
+  own properties, and everyone can use the platform chatbot page.
 - Switch between light and dark theme with the icon button in the top-right corner.
 - See the first 10 properties immediately on the homepage.
 
@@ -66,7 +66,7 @@ Open http://localhost:3000
 
 - `/` homepage property search
 - `/bookings` booking request dashboard and cancellation history for regular users
-- `/chat` chat simulator
+- `/chat` platform chatbot preview
 - `/login` login form
 - `/signup` sign-up form
 - `/dashboard` owner-only property approval and editing dashboard
@@ -86,9 +86,13 @@ Property and booking tools:
 - `POST /api/tools/search`
 - `POST /api/tools/details`
 - `POST /api/tools/book`
-- `GET /api/tools/message-owner`
-- `POST /api/tools/message-owner`
-- `PATCH /api/tools/message-owner`
+- `PATCH /api/bookings/[id]`
+- `PATCH /api/owner/bookings/[id]`
+- `PATCH /api/owner/properties/[id]`
+
+Agentic AI guide:
+
+- `docs/agentic-chatbot-guide.md`
 
 ## Notes
 
@@ -102,3 +106,4 @@ Property and booking tools:
 - The property detail page availability date is advanced when a new booking is
   created for that property.
 - The homepage shows a compact auth-aware sidebar and a friendlier search header instead of the earlier sandbox wording.
+- Search is intentionally open to anonymous users in the chatbot flow, while booking and owner actions should require login when the chatbot integration is wired.

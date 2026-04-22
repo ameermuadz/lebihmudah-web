@@ -159,7 +159,7 @@ const publicNavItems = [
   },
   {
     href: "/chat",
-    label: "Chat Simulator",
+    label: "Platform Chatbot",
     icon: ChatIcon,
   },
   {
@@ -177,7 +177,7 @@ const ownerNavItems = [
   },
   {
     href: "/chat",
-    label: "Chat Simulator",
+    label: "Platform Chatbot",
     icon: ChatIcon,
   },
 ];

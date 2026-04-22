@@ -6,10 +6,27 @@ type ThemeMode = "light" | "dark";
 
 const THEME_STORAGE_KEY = "lebihmudah-theme";
 
+const getSystemTheme = (): ThemeMode =>
+  window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+
+const getInitialTheme = (): ThemeMode => {
+  if (typeof window === "undefined") {
+    return "light";
+  }
+
+  const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+  if (savedTheme === "light" || savedTheme === "dark") {
+    return savedTheme;
+  }
+
+  return getSystemTheme();
+};
+
 const applyThemeToDocument = (theme: ThemeMode) => {
   const root = document.documentElement;
   root.classList.remove("light", "dark");
   root.classList.add(theme);
+  root.style.colorScheme = theme;
 };
 
 const SunIcon = ({ className }: { className: string }) => (
@@ -49,15 +66,40 @@ const MoonIcon = ({ className }: { className: string }) => (
 );
 
 export default function ThemeToggle() {
-  const [theme, setTheme] = useState<ThemeMode>("light");
+  const [theme, setTheme] = useState<ThemeMode>(getInitialTheme);
 
   useEffect(() => {
-    const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
-    const nextTheme: ThemeMode =
-      savedTheme === "light" || savedTheme === "dark" ? savedTheme : "light";
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
 
-    setTheme(nextTheme);
-    applyThemeToDocument(nextTheme);
+    const syncTheme = () => {
+      const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+      const nextTheme: ThemeMode =
+        savedTheme === "light" || savedTheme === "dark"
+          ? savedTheme
+          : mediaQuery.matches
+            ? "dark"
+            : "light";
+
+      setTheme(nextTheme);
+      applyThemeToDocument(nextTheme);
+    };
+
+    syncTheme();
+
+    const handleSystemThemeChange = () => {
+      const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+
+      if (savedTheme === "light" || savedTheme === "dark") {
+        return;
+      }
+
+      syncTheme();
+    };
+
+    mediaQuery.addEventListener("change", handleSystemThemeChange);
+
+    return () =>
+      mediaQuery.removeEventListener("change", handleSystemThemeChange);
   }, []);
 
   const handleToggle = () => {

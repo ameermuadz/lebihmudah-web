@@ -1,185 +1,100 @@
-"use client";
-
-import { FormEvent, useMemo, useState } from "react";
-import PropertyCard from "@/components/PropertyCard";
-import { Property } from "@/lib/types";
-
-interface ChatMessage {
+type ChatMessage = {
   id: string;
   role: "user" | "agent" | "system";
   text: string;
-  properties?: Property[];
-}
+};
 
-interface AgentResponse {
-  reply?: string;
-  message?: string;
-  text?: string;
-  properties?: Property[];
-  data?: {
-    reply?: string;
-    message?: string;
-    text?: string;
-    properties?: Property[];
-  };
-}
+const previewMessages: ChatMessage[] = [
+  {
+    id: "agent-intro",
+    role: "agent",
+    text: "Hi, I am the LebihMudah platform chatbot. Search properties without logging in, then sign in when you want booking or owner workflows.",
+  },
+  {
+    id: "user-example",
+    role: "user",
+    text: "Show me a pet-friendly room in Bangsar under RM 1,500.",
+  },
+  {
+    id: "system-note",
+    role: "system",
+    text: "This is a UI preview only. The chatbot wiring, tool orchestration, and owner handoff will be added later by the chatbot team.",
+  },
+];
 
-const AGENT_API_URL =
-  process.env.NEXT_PUBLIC_AGENT_CHAT_URL ?? "http://localhost:8000/agent/chat";
-
-const createId = () =>
-  `m_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-
-const getReplyText = (payload: AgentResponse) =>
-  payload.reply ??
-  payload.message ??
-  payload.text ??
-  payload.data?.reply ??
-  payload.data?.message ??
-  payload.data?.text;
-
-const getProperties = (payload: AgentResponse) =>
-  payload.properties ?? payload.data?.properties;
+const bubbleClassByRole: Record<ChatMessage["role"], string> = {
+  user: "ml-auto border border-emerald-500/30 bg-emerald-600 text-white shadow-[0_12px_30px_-18px_rgba(16,185,129,0.75)]",
+  agent:
+    "mr-auto border border-zinc-200 bg-white text-zinc-900 shadow-[0_12px_30px_-18px_rgba(15,23,42,0.25)] dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100",
+  system:
+    "mx-auto border border-amber-200 bg-amber-50 text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-100",
+};
 
 export default function ChatWindow() {
-  const [sessionId] = useState(() =>
-    typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
-      ? crypto.randomUUID()
-      : `session_${Date.now()}`,
-  );
-  const [inputValue, setInputValue] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: createId(),
-      role: "agent",
-      text: "Hi! I am LebihMudah Assistant. Tell me what rental home you are looking for.",
-    },
-  ]);
-
-  const sortedMessages = useMemo(() => messages, [messages]);
-
-  const handleSendMessage = async (event: FormEvent) => {
-    event.preventDefault();
-    const cleanMessage = inputValue.trim();
-
-    if (!cleanMessage || isLoading) {
-      return;
-    }
-
-    const userMessage: ChatMessage = {
-      id: createId(),
-      role: "user",
-      text: cleanMessage,
-    };
-
-    setMessages((current) => [...current, userMessage]);
-    setInputValue("");
-    setIsLoading(true);
-
-    try {
-      const response = await fetch(AGENT_API_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          sessionId,
-          message: cleanMessage,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Agent HTTP ${response.status}`);
-      }
-
-      const payload = (await response
-        .json()
-        .catch(() => ({}))) as AgentResponse;
-      const replyText = getReplyText(payload) ?? "I received your message.";
-      const properties = getProperties(payload);
-
-      setMessages((current) => [
-        ...current,
-        {
-          id: createId(),
-          role: "agent",
-          text: replyText,
-          properties: Array.isArray(properties) ? properties : undefined,
-        },
-      ]);
-    } catch (error) {
-      const reason = error instanceof Error ? error.message : "Unknown error";
-      setMessages((current) => [
-        ...current,
-        {
-          id: createId(),
-          role: "system",
-          text: `Unable to reach agent backend at ${AGENT_API_URL}. (${reason})`,
-        },
-      ]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   return (
-    <section className="flex h-[calc(100vh-3rem)] max-h-[860px] flex-col overflow-hidden rounded-2xl border border-zinc-700 bg-zinc-900 shadow-2xl shadow-black/30">
-      <header className="border-b border-zinc-700 bg-zinc-950 px-5 py-4">
-        <h1 className="text-lg font-semibold text-white">
-          WhatsApp Portal Simulator
+    <section className="flex h-[calc(100vh-3rem)] max-h-[860px] flex-col overflow-hidden rounded-[32px] border border-zinc-200 bg-white shadow-[0_24px_80px_-48px_rgba(15,23,42,0.3)] transition-colors dark:border-zinc-800 dark:bg-zinc-900">
+      <header className="border-b border-zinc-200 bg-slate-50/90 px-5 py-4 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/70">
+        <p className="text-xs uppercase tracking-[0.28em] text-emerald-600 dark:text-emerald-300">
+          Platform chatbot preview
+        </p>
+        <h1 className="mt-2 text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+          LebihMudah AI Chatbot
         </h1>
-        <p className="text-sm text-zinc-400">Session: {sessionId}</p>
+        <p className="mt-2 max-w-3xl text-sm text-zinc-600 dark:text-zinc-400">
+          Search properties without logging in. Sign in when you want the
+          chatbot to book for you or use owner tools.
+        </p>
+
+        <div className="mt-4 flex flex-wrap gap-2 text-xs font-medium">
+          <span className="rounded-full bg-emerald-100 px-3 py-1 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200">
+            Search: public
+          </span>
+          <span className="rounded-full bg-zinc-200 px-3 py-1 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">
+            Booking: login required
+          </span>
+          <span className="rounded-full bg-zinc-200 px-3 py-1 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">
+            Owner tools: owner login required
+          </span>
+        </div>
       </header>
 
-      <div className="flex-1 space-y-3 overflow-y-auto bg-[radial-gradient(circle_at_top,#334155_0%,#0f172a_45%,#020617_100%)] p-4">
-        {sortedMessages.map((message) => {
-          const isUser = message.role === "user";
-          const bubbleClass = isUser
-            ? "ml-auto bg-emerald-600 text-white"
-            : message.role === "agent"
-              ? "mr-auto bg-zinc-700 text-zinc-100"
-              : "mx-auto bg-amber-600/90 text-white";
+      <div className="flex-1 space-y-3 overflow-y-auto bg-slate-50 px-4 py-5 dark:bg-zinc-950">
+        {previewMessages.map((message) => (
+          <article
+            key={message.id}
+            className={`w-full max-w-[82%] rounded-2xl px-4 py-3 text-sm leading-6 ${bubbleClassByRole[message.role]}`}
+          >
+            <p>{message.text}</p>
+          </article>
+        ))}
 
-          return (
-            <article
-              key={message.id}
-              className={`w-full max-w-[80%] rounded-2xl p-3 text-sm ${bubbleClass}`}
-            >
-              <p>{message.text}</p>
-              {message.properties && message.properties.length > 0 ? (
-                <div className="mt-3 space-y-3">
-                  {message.properties.map((property) => (
-                    <PropertyCard key={property.id} property={property} />
-                  ))}
-                </div>
-              ) : null}
-            </article>
-          );
-        })}
-        {isLoading ? (
-          <p className="text-sm text-zinc-300">Agent is thinking...</p>
-        ) : null}
+        <div className="rounded-[28px] border border-dashed border-zinc-300 bg-white p-5 text-sm text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400">
+          The actual chatbot integration will be connected by another developer.
+          This screen is only keeping the visual shell ready for the future
+          agentic workflow.
+        </div>
       </div>
 
-      <form
-        onSubmit={handleSendMessage}
-        className="flex items-center gap-2 border-t border-zinc-700 bg-zinc-950 p-4"
-      >
-        <input
-          value={inputValue}
-          onChange={(event) => setInputValue(event.target.value)}
-          placeholder="Type your message..."
-          className="h-11 flex-1 rounded-full border border-zinc-600 bg-zinc-800 px-4 text-sm text-white outline-none transition focus:border-emerald-500"
-        />
-        <button
-          type="submit"
-          disabled={isLoading}
-          className="rounded-full bg-emerald-600 px-5 py-2 text-sm font-medium text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:bg-zinc-600"
-        >
-          Send
-        </button>
-      </form>
+      <div className="border-t border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
+        <div className="flex items-center gap-2">
+          <input
+            disabled
+            placeholder="Chatbot integration will be wired here later"
+            className="h-12 flex-1 rounded-full border border-zinc-300 bg-zinc-100 px-4 text-sm text-zinc-500 placeholder:text-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-500"
+          />
+          <button
+            type="button"
+            disabled
+            className="rounded-full bg-emerald-600 px-5 py-3 text-sm font-semibold text-white opacity-60"
+          >
+            Send
+          </button>
+        </div>
+        <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-500">
+          UI only for now. Search remains open, while booking and owner flows
+          will be gated by login when the chatbot is wired.
+        </p>
+      </div>
     </section>
   );
 }

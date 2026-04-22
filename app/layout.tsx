@@ -7,9 +7,9 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "LebihMudah.my Platform Layer",
+  title: "LebihMudah.my Platform",
   description:
-    "Next.js platform layer for the LebihMudah.my agentic AI hackathon demo",
+    "LebihMudah.my property platform with chatbot, search, booking, and owner workflows.",
 };
 
 export default function RootLayout({
