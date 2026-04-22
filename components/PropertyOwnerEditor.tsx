@@ -21,6 +21,7 @@ export default function PropertyOwnerEditor({
   property,
 }: PropertyOwnerEditorProps) {
   const router = useRouter();
+  const [isEditingOpen, setIsEditingOpen] = useState(false);
   const [title, setTitle] = useState(property.title);
   const [location, setLocation] = useState(property.location);
   const [price, setPrice] = useState(String(property.price));
@@ -90,13 +91,23 @@ export default function PropertyOwnerEditor({
             Update this property
           </h2>
           <p className="mt-2 max-w-3xl text-sm text-zinc-600 dark:text-zinc-400">
-            Edit the live listing fields below. The booking timeline underneath
-            shows pending, confirmed, and cancelled requests for this property.
+            Edit the live listing fields when needed. The booking timeline below
+            stays visible so you can review pending, confirmed, and cancelled
+            requests for this property at a glance.
           </p>
         </div>
-        <div className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200">
-          {property.bookings.length} booking
-          {property.bookings.length === 1 ? "" : "s"}
+        <div className="flex flex-wrap gap-3">
+          <div className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200">
+            {property.bookings.length} booking
+            {property.bookings.length === 1 ? "" : "s"}
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsEditingOpen((current) => !current)}
+            className="rounded-2xl bg-zinc-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
+          >
+            {isEditingOpen ? "Hide edit form" : "Edit property"}
+          </button>
         </div>
       </div>
 
@@ -106,127 +117,143 @@ export default function PropertyOwnerEditor({
         </p>
       ) : null}
 
-      <form onSubmit={handleSubmit} className="grid gap-4 md:grid-cols-2">
-        <label className="space-y-2 md:col-span-2">
-          <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-            Title
-          </span>
-          <input
-            value={title}
-            onChange={(event) => setTitle(event.target.value)}
-            className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-emerald-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
-          />
-        </label>
+      {isEditingOpen ? (
+        <>
+          <form onSubmit={handleSubmit} className="grid gap-4 md:grid-cols-2">
+            <label className="space-y-2 md:col-span-2">
+              <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                Title
+              </span>
+              <input
+                value={title}
+                onChange={(event) => setTitle(event.target.value)}
+                className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-emerald-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+              />
+            </label>
 
-        <label className="space-y-2">
-          <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-            Location
-          </span>
-          <input
-            value={location}
-            onChange={(event) => setLocation(event.target.value)}
-            className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-emerald-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
-          />
-        </label>
+            <label className="space-y-2">
+              <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                Location
+              </span>
+              <input
+                value={location}
+                onChange={(event) => setLocation(event.target.value)}
+                className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-emerald-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+              />
+            </label>
 
-        <label className="space-y-2">
-          <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-            Availability date
-          </span>
-          <input
-            type="date"
-            value={availabilityDate}
-            onChange={(event) => setAvailabilityDate(event.target.value)}
-            className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-emerald-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
-          />
-        </label>
+            <label className="space-y-2">
+              <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                Availability date
+              </span>
+              <input
+                type="date"
+                value={availabilityDate}
+                onChange={(event) => setAvailabilityDate(event.target.value)}
+                className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-emerald-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+              />
+            </label>
 
-        <label className="space-y-2">
-          <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-            Price
-          </span>
-          <input
-            type="number"
-            min="1"
-            value={price}
-            onChange={(event) => setPrice(event.target.value)}
-            className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-emerald-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
-          />
-        </label>
+            <label className="space-y-2">
+              <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                Price
+              </span>
+              <input
+                type="number"
+                min="1"
+                value={price}
+                onChange={(event) => setPrice(event.target.value)}
+                className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-emerald-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+              />
+            </label>
 
-        <label className="space-y-2">
-          <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-            Rooms
-          </span>
-          <input
-            type="number"
-            min="1"
-            value={rooms}
-            onChange={(event) => setRooms(event.target.value)}
-            className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-emerald-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
-          />
-        </label>
+            <label className="space-y-2">
+              <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                Rooms
+              </span>
+              <input
+                type="number"
+                min="1"
+                value={rooms}
+                onChange={(event) => setRooms(event.target.value)}
+                className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-emerald-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+              />
+            </label>
 
-        <label className="space-y-2">
-          <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-            Pets allowed
-          </span>
-          <select
-            value={petsAllowed}
-            onChange={(event) => setPetsAllowed(event.target.value)}
-            className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-emerald-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
-          >
-            <option value="true">Yes</option>
-            <option value="false">No</option>
-          </select>
-        </label>
+            <label className="space-y-2">
+              <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                Pets allowed
+              </span>
+              <select
+                value={petsAllowed}
+                onChange={(event) => setPetsAllowed(event.target.value)}
+                className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-emerald-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+              >
+                <option value="true">Yes</option>
+                <option value="false">No</option>
+              </select>
+            </label>
 
-        <label className="space-y-2 md:col-span-2">
-          <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-            Description
-          </span>
-          <textarea
-            value={description}
-            onChange={(event) => setDescription(event.target.value)}
-            rows={4}
-            className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-emerald-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
-          />
-        </label>
+            <label className="space-y-2 md:col-span-2">
+              <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                Description
+              </span>
+              <textarea
+                value={description}
+                onChange={(event) => setDescription(event.target.value)}
+                rows={4}
+                className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-emerald-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+              />
+            </label>
 
-        <label className="space-y-2 md:col-span-2">
-          <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-            Amenities, one per line
-          </span>
-          <textarea
-            value={amenities}
-            onChange={(event) => setAmenities(event.target.value)}
-            rows={4}
-            className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-emerald-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
-          />
-        </label>
+            <label className="space-y-2 md:col-span-2">
+              <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                Amenities, one per line
+              </span>
+              <textarea
+                value={amenities}
+                onChange={(event) => setAmenities(event.target.value)}
+                rows={4}
+                className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-emerald-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+              />
+            </label>
 
-        <label className="space-y-2 md:col-span-2">
-          <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-            Rules, one per line
-          </span>
-          <textarea
-            value={rules}
-            onChange={(event) => setRules(event.target.value)}
-            rows={4}
-            className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-emerald-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
-          />
-        </label>
+            <label className="space-y-2 md:col-span-2">
+              <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                Rules, one per line
+              </span>
+              <textarea
+                value={rules}
+                onChange={(event) => setRules(event.target.value)}
+                rows={4}
+                className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-emerald-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+              />
+            </label>
 
-        <div className="md:col-span-2">
+            <div className="md:col-span-2">
+              <button
+                type="submit"
+                disabled={isSaving}
+                className="rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:bg-zinc-400 dark:disabled:bg-zinc-700"
+              >
+                {isSaving ? "Saving..." : "Save property changes"}
+              </button>
+            </div>
+          </form>
+
           <button
-            type="submit"
-            disabled={isSaving}
-            className="rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:bg-zinc-400 dark:disabled:bg-zinc-700"
+            type="button"
+            onClick={() => setIsEditingOpen(false)}
+            className="inline-flex rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm font-semibold text-zinc-900 transition hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
           >
-            {isSaving ? "Saving..." : "Save property changes"}
+            Hide edit form
           </button>
+        </>
+      ) : (
+        <div className="rounded-[28px] border border-dashed border-zinc-300 bg-zinc-50 p-6 text-sm text-zinc-600 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-400">
+          This listing is view-only until you choose to edit it.
         </div>
-      </form>
+      )}
 
       <BookingStatusSections
         title="Booking history"
