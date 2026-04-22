@@ -48,6 +48,8 @@ If you only need a quick schema sync during local development, you can also use 
 npm run db:seed
 ```
 
+This command clears the demo tables first and then imports `properties.csv`, `users.csv`, and `bookings.csv`. Keep those files in the workspace root or one of its parent folders before seeding. In this workspace, they live in `c:\hackathon\lebihmudah\`, one level above `lebihmudah-web`.
+
 5. Start the development server.
 
 ```bash
