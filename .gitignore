@@ -35,6 +35,9 @@ prisma/dev.db-journal
 prisma/dev.db-shm
 prisma/dev.db-wal
 
+# prisma generated client output
+generated/prisma/
+
 # vercel
 .vercel
 
