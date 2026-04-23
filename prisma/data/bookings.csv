@@ -1,0 +1,13 @@
+propertyId,userEmail,moveInDate,moveOutDate,status
+p_045,john@example.com,2024-06-15,2024-12-20,Cancelled
+p_035,sarah@example.com,2024-06-05,2025-01-29,Cancelled
+p_002,ali@example.com,2024-07-05,2025-01-26,Confirmed
+p_005,john@example.com,2024-07-29,2025-04-25,Cancelled
+p_033,ahlian@example.com,2024-06-19,2025-06-05,Cancelled
+p_034,siti@example.com,2024-06-01,2025-05-15,Pending
+p_036,raju@example.com,2024-06-13,2025-03-15,Cancelled
+p_045,siti@example.com,2024-07-31,2025-03-08,Pending
+p_007,john@example.com,2024-07-28,2025-06-19,Confirmed
+p_015,muthu@example.com,2024-07-19,2025-01-31,Pending
+p_024,sarah@example.com,2024-07-05,2025-07-01,Confirmed
+p_015,siti@example.com,2024-07-22,2025-04-11,Cancelled

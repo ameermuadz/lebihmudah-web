@@ -24,19 +24,33 @@ LebihMudah.my is a Next.js 14 property search and booking demo backed by Prisma 
 
 ## Local Setup
 
-1. Install dependencies.
+1. Enter the project directory.
+
+```bash
+cd lebihmudah-web
+```
+
+2. Set up environment variables.
+
+Copy `.env.example`, then rename the copy to `.env`.
+
+```bash
+cp .env.example .env
+```
+
+3. Install dependencies.
 
 ```bash
 npm install
 ```
 
-2. Generate the Prisma client.
+4. Generate the Prisma client.
 
 ```bash
 npm run prisma:generate
 ```
 
-3. Create or update the local database schema.
+5. Create or update the local database schema.
 
 ```bash
 npm run prisma:migrate -- --name init
@@ -44,17 +58,17 @@ npm run prisma:migrate -- --name init
 
 If you only need a quick schema sync during local development, you can also use `npm run db:push`.
 
-4. Seed the demo data.
+6. Seed the demo data.
 
 ```bash
 npm run db:seed
 ```
 
-This command clears the demo tables first and then imports `properties.csv`, `users.csv`, and `bookings.csv`. Keep those files in the workspace root or one of its parent folders before seeding. In this workspace, they live in `c:\hackathon\lebihmudah\`, one level above `lebihmudah-web`.
+This command clears the demo tables first and then imports `properties.csv`, `users.csv`, and `bookings.csv` from `prisma/data/`.
 
 Owner accounts are also created from the property owner IDs during seed, with login emails like `owner101@lebihmudah.my` and matching passwords such as `owner101123`.
 
-5. Start the development server.
+7. Start the development server.
 
 ```bash
 npm run dev

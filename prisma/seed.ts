@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { PrismaClient } from "../generated/prisma";
 import { hashPassword } from "../lib/auth";
 
@@ -9,6 +10,10 @@ const prisma = new PrismaClient();
 const SOURCE_YEAR = 2024;
 const demoYear = new Date().getFullYear();
 const yearOffset = Math.max(0, demoYear - SOURCE_YEAR);
+const seedDataDirectory = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "data",
+);
 
 type CsvRecord = Record<string, string>;
 
@@ -124,16 +129,12 @@ const parseCsv = (content: string): CsvRecord[] => {
 };
 
 const resolveCsvPath = (fileName: string) => {
-  const candidates = [
-    path.resolve(process.cwd(), fileName),
-    path.resolve(process.cwd(), "..", fileName),
-    path.resolve(process.cwd(), "..", "..", fileName),
-  ];
+  const resolvedPath = path.resolve(seedDataDirectory, fileName);
 
-  const resolvedPath = candidates.find((candidate) => existsSync(candidate));
-
-  if (!resolvedPath) {
-    throw new Error(`Unable to locate ${fileName}`);
+  if (!existsSync(resolvedPath)) {
+    throw new Error(
+      `Unable to locate ${fileName} in ${seedDataDirectory}. Expected seed files in prisma/data`,
+    );
   }
 
   return resolvedPath;
