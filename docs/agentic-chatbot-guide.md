@@ -33,10 +33,11 @@ The current repo only provides the UI shell and backend property/auth/booking en
 
 ### Renter actions
 
-| Method  | Route                | Use                                                                  |
-| ------- | -------------------- | -------------------------------------------------------------------- |
-| `POST`  | `/api/tools/book`    | Create a booking request. The chatbot should gate this behind login. |
-| `PATCH` | `/api/bookings/[id]` | Cancel a renter booking.                                             |
+| Method  | Route                       | Use                                                                    |
+| ------- | --------------------------- | ---------------------------------------------------------------------- |
+| `POST`  | `/api/tools/book`           | Create a booking request. The chatbot should gate this behind login.   |
+| `GET`   | `/api/renter/bookings`      | List the logged-in renter's bookings with property details and status. |
+| `PATCH` | `/api/renter/bookings/[id]` | Cancel a renter booking.                                               |
 
 ### Owner actions
 
@@ -52,9 +53,29 @@ The current repo only provides the UI shell and backend property/auth/booking en
 1. Start with `/api/tools/search` for anonymous property discovery.
 2. Use `/api/tools/details` when the user asks for more information about a specific property.
 3. Before booking, prompt the user to log in and confirm the session through `/api/auth/me`.
-4. After login, call `/api/tools/book` for renter bookings.
-5. If the user is an owner, fetch their session with `/api/auth/me`, then use `/api/owner/statistics` for a quick summary and `/api/owner/properties` to list owned properties before allowing property editing and approval actions through the owner routes.
-6. Keep the UI theme-aware so the chatbot preview follows the app's light and dark mode switcher.
+4. After login, call `/api/tools/book` for new renter booking requests.
+5. When the user asks about existing reservations, call `/api/renter/bookings` to list their bookings and `/api/renter/bookings/[id]` to cancel one.
+6. If the user is an owner, fetch their session with `/api/auth/me`, then use `/api/owner/statistics` for a quick summary and `/api/owner/properties` to list owned properties before allowing property editing and approval actions through the owner routes.
+7. Keep the UI theme-aware so the chatbot preview follows the app's light and dark mode switcher.
+
+## Renter Booking Tool
+
+Use `/api/renter/bookings` when the chatbot needs to surface a renter's reservation history.
+
+Each returned item includes booking fields plus property details such as:
+
+- `propertyTitle`
+- `propertyLocation`
+- `propertyImage`
+- `propertyPrice`
+- `propertyRooms`
+- `propertyPetsAllowed`
+- `propertyAvailabilityDate`
+- `moveInDate`
+- `moveOutDate`
+- `status`
+
+Use `/api/renter/bookings/[id]` to cancel one of those bookings when the user confirms the action.
 
 ## Owner Statistics Tool
 

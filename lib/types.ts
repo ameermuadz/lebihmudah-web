@@ -112,6 +112,10 @@ export interface BookingListItem {
   propertyTitle: string;
   propertyLocation: string;
   propertyImage: string;
+  propertyPrice?: number;
+  propertyRooms?: number;
+  propertyPetsAllowed?: boolean;
+  propertyAvailabilityDate?: string;
   userContact: string;
   moveInDate: string;
   moveOutDate: string;
