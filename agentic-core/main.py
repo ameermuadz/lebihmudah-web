@@ -45,6 +45,18 @@ class AgentResponse(BaseModel):
     response: str
 
 
+@app.get("/api/chat/{session_id}/history")
+def get_chat_history(session_id: str) -> list[dict[str, str]]:
+    try:
+        memory = SessionMemoryManager()
+        history = memory.get_history(session_id)
+        # Filter out system updates for a cleaner UI if you want, but for now just return it
+        return history
+    except Exception as exc:
+        logger.exception("Failed to retrieve chat history")
+        raise HTTPException(status_code=500, detail="Failed to retrieve chat history") from exc
+
+
 @app.post("/api/chat", response_model=AgentResponse)
 def chat(payload: ChatRequest) -> AgentResponse:
     try:

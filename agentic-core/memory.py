@@ -5,6 +5,7 @@ from pathlib import Path
 
 DEFAULT_DB_PATH = Path(__file__).resolve().parent / "agent_memory.db"
 
+GUEST_MEMORY: dict[str, list[dict[str, str]]] = {}
 
 class SessionMemoryManager:
     """Stores and retrieves chat history grouped by session ID."""
@@ -40,6 +41,12 @@ class SessionMemoryManager:
 
     def add_message(self, session_id: str, role: str, content: str) -> None:
         """Appends a single message row for a session."""
+        if session_id.startswith("guest-"):
+            if session_id not in GUEST_MEMORY:
+                GUEST_MEMORY[session_id] = []
+            GUEST_MEMORY[session_id].append({"role": role, "content": content})
+            return
+
         with self._connect() as connection:
             connection.execute(
                 """
@@ -51,6 +58,12 @@ class SessionMemoryManager:
 
     def get_history(self, session_id: str, limit: int | None = None) -> list[dict[str, str]]:
         """Returns chat history rows in chronological order for a session."""
+        if session_id.startswith("guest-"):
+            history = GUEST_MEMORY.get(session_id, [])
+            if limit is not None and limit > 0:
+                return history[-limit:]
+            return history
+
         with self._connect() as connection:
             if limit is not None and limit > 0:
                 rows = connection.execute(
@@ -82,6 +95,10 @@ class SessionMemoryManager:
 
     def clear_session(self, session_id: str) -> None:
         """Removes all messages for a session."""
+        if session_id.startswith("guest-"):
+            GUEST_MEMORY.pop(session_id, None)
+            return
+
         with self._connect() as connection:
             connection.execute(
                 """
