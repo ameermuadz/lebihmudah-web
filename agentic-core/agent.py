@@ -1,0 +1,187 @@
+from __future__ import annotations
+
+import json
+import os
+from typing import Any
+
+from langchain_anthropic import ChatAnthropic
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, ToolMessage
+from memory import SessionMemoryManager
+from tools import check_session, get_property_details, initiate_booking, search_properties, message_owner, request_loa
+
+SYSTEM_PROMPT = """You are the LebihMudah Agentic Core assistant, a smart real estate agent designed to handle property rentals end-to-end.
+
+Follow this workflow strictly:
+1. If the user asks to find a house with specific filters (e.g. rent < RM1000, 2 people), use `search_properties`. 
+2. If no properties match exactly, search again with broader constraints to give the closest possible option.
+3. Show the resulting list to the user clearly.
+4. If the user picks a house and has specific questions about it, use the `message_owner` tool to ask the owner directly. Do NOT invent details.
+5. After getting the owner's reply, present the information to the user. The owner might ask some follow up questions (e.g. about move-in date or profession). 
+6. Ask the user the owner's questions to collect data. 
+7. Once you collect the answers from the user, use `message_owner` again to relay the answers back to the owner.
+8. The user can either ask for more info or proceed to rent.
+9. If they proceed to rent, use the `request_loa` tool to contact the owner and ask for a Letter of Agreement (LOA). Show this LOA to the user.
+10. If the user agrees to the LOA, proceed with `initiate_booking` (make sure to `check_session` first).
+11. If they decline or there's no match, end the conversation politely.
+
+Other rules:
+- Gracefully handle API errors by explaining what failed and suggesting the next safe action.
+- Always verify login with check_session before initiating any booking.
+"""
+
+TOOLS = [search_properties, get_property_details, check_session, initiate_booking, message_owner, request_loa]
+MAX_TOOL_ROUNDS = 6
+
+
+def _history_to_messages(history: list[dict[str, str]]) -> list[Any]:
+    messages = []
+    for row in history:
+        role = row.get("role", "assistant")
+        content = row.get("content", "")
+        if role == "user":
+            messages.append(HumanMessage(content=content))
+        elif role == "assistant":
+            messages.append(AIMessage(content=content))
+        elif role == "system":
+            messages.append(HumanMessage(content=f"[System Update: {content}]"))
+    return messages
+
+
+def _serialize_tool_result(result: Any) -> str:
+    if isinstance(result, (dict, list)):
+        return json.dumps(result, ensure_ascii=True)
+    return str(result)
+
+
+def run_agent(session_id: str, message: str, user_token: str | None) -> str:
+    """Runs the GLM agent with tool-calling and SQLite-backed session memory using LangChain."""
+    memory = SessionMemoryManager()
+    
+    api_key = (
+        os.getenv("ANTHROPIC_API_KEY")
+        or os.getenv("ZHIPUAI_API_KEY")
+        or ""
+    ).strip()
+
+    if not api_key:
+        raise ValueError(
+            "ANTHROPIC_API_KEY is required. "
+            "You can also use ZHIPUAI_API_KEY as a fallback env name."
+        )
+
+    base_url = os.getenv("ANTHROPIC_BASE_URL", "").strip().rstrip("/")
+    if not base_url:
+        raise ValueError(
+            "ANTHROPIC_BASE_URL is required for this provider runtime."
+        )
+
+    raw_model = (
+        os.getenv("ANTHROPIC_MODEL")
+        or os.getenv("ZHIPUAI_MODEL")
+        or "ilmu-glm-5.1"
+    ).strip()
+
+    model = "ilmu-glm-5.1" if raw_model.lower() == "ilmu-glm-5.1" else raw_model
+    timeout_seconds = float(os.getenv("ANTHROPIC_TIMEOUT_SECONDS", "30"))
+    max_tokens = int(os.getenv("ANTHROPIC_MAX_TOKENS", "1024"))
+
+    llm = ChatAnthropic(
+        model=model,
+        anthropic_api_key=api_key,
+        anthropic_api_url=base_url,
+        timeout=timeout_seconds,
+        max_tokens=max_tokens,
+        temperature=0.2,
+    )
+    llm_with_tools = llm.bind_tools(TOOLS)
+
+    history = memory.get_history(session_id, limit=20)
+    
+    messages: list[Any] = [SystemMessage(content=SYSTEM_PROMPT)]
+    messages.extend(_history_to_messages(history))
+    
+    runtime_token = user_token or ""
+    runtime_token_status = "provided" if runtime_token else "not_provided"
+    
+    messages.append(
+        HumanMessage(
+            content=(
+                f"User message:\n{message}\n\n"
+                "Runtime context:\n"
+                f"- session_id: {session_id}\n"
+                f"- user_token_status: {runtime_token_status}\n"
+                "For booking requests, call check_session first and only then call initiate_booking. "
+                "The backend injects the actual token into tool calls automatically."
+            )
+        )
+    )
+
+    session_verified: bool | None = None
+
+    for _ in range(MAX_TOOL_ROUNDS):
+        response = llm_with_tools.invoke(messages)
+        messages.append(response)
+
+        if not response.tool_calls:
+            final_text = response.content
+            if isinstance(final_text, list):
+                final_text = " ".join([block.get("text", "") for block in final_text if isinstance(block, dict) and block.get("type") == "text"])
+            
+            final_text = str(final_text).strip() or "I could not generate a response right now."
+            memory.add_message(session_id, "user", message)
+            memory.add_message(session_id, "assistant", final_text)
+            return final_text
+
+        for tool_call in response.tool_calls:
+            tool_name = tool_call["name"]
+            tool_args = dict(tool_call["args"])
+            
+            tool = next((t for t in TOOLS if t.name == tool_name), None)
+            if not tool:
+                messages.append(
+                    ToolMessage(
+                        content=f"Unknown tool: {tool_name}",
+                        tool_call_id=tool_call["id"],
+                        name=tool_name,
+                        status="error"
+                    )
+                )
+                continue
+
+            if tool_name in {"check_session", "initiate_booking"} and not tool_args.get("user_token"):
+                tool_args["user_token"] = runtime_token
+
+            result_str = ""
+            if tool_name == "check_session":
+                result = tool.invoke(tool_args)
+                if isinstance(result, dict):
+                    session_verified = bool(result.get("ok"))
+                result_str = _serialize_tool_result(result)
+            elif tool_name == "initiate_booking" and session_verified is not True:
+                precheck = check_session.invoke({"user_token": runtime_token})
+                session_verified = bool(isinstance(precheck, dict) and precheck.get("ok"))
+                if not session_verified:
+                    result_str = _serialize_tool_result({
+                        "ok": False,
+                        "error": "Booking blocked because check_session failed. Ask the user to log in first.",
+                        "check_session": precheck,
+                    })
+                else:
+                    result = tool.invoke(tool_args)
+                    result_str = _serialize_tool_result(result)
+            else:
+                result = tool.invoke(tool_args)
+                result_str = _serialize_tool_result(result)
+
+            messages.append(
+                ToolMessage(
+                    content=result_str,
+                    tool_call_id=tool_call["id"],
+                    name=tool_name
+                )
+            )
+
+    fallback = "I could not complete this request right now. Please try again in a moment."
+    memory.add_message(session_id, "user", message)
+    memory.add_message(session_id, "assistant", fallback)
+    return fallback

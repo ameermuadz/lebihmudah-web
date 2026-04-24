@@ -1,0 +1,299 @@
+from __future__ import annotations
+
+from datetime import datetime, timedelta, timezone
+from typing import Any
+
+import requests
+from langchain_core.tools import tool
+
+BASE_URL = "http://localhost:3000"
+AUTH_COOKIE_NAME = "lebihmudah_session"
+REQUEST_TIMEOUT_SECONDS = 20
+
+
+def _build_auth_cookies(user_token: str | None) -> dict[str, str]:
+    if not user_token:
+        return {}
+    return {AUTH_COOKIE_NAME: user_token}
+
+
+def _safe_parse_response(response: requests.Response) -> Any:
+    try:
+        return response.json()
+    except ValueError:
+        return {"raw": response.text}
+
+
+def _request(
+    method: str,
+    path: str,
+    payload: dict[str, Any] | None = None,
+    cookies: dict[str, str] | None = None,
+) -> dict[str, Any]:
+    url = f"{BASE_URL}{path}"
+    try:
+        response = requests.request(
+            method=method,
+            url=url,
+            json=payload,
+            cookies=cookies,
+            timeout=REQUEST_TIMEOUT_SECONDS,
+        )
+    except requests.RequestException as exc:
+        return {
+            "ok": False,
+            "status_code": 0,
+            "error": f"Request failed: {exc}",
+            "data": None,
+        }
+
+    data = _safe_parse_response(response)
+
+    if response.ok:
+        return {
+            "ok": True,
+            "status_code": response.status_code,
+            "data": data,
+        }
+
+    error_text = data.get("error") if isinstance(data, dict) else None
+    if not isinstance(error_text, str) or not error_text.strip():
+        error_text = f"HTTP {response.status_code} from {path}"
+
+    return {
+        "ok": False,
+        "status_code": response.status_code,
+        "error": error_text,
+        "data": data,
+    }
+
+
+def _derive_move_out_date(move_in_date: str) -> str:
+    try:
+        normalized = move_in_date.replace("Z", "+00:00")
+        parsed = datetime.fromisoformat(normalized)
+        move_out = parsed + timedelta(days=30)
+
+        if "T" in move_in_date:
+            if move_in_date.endswith("Z"):
+                return move_out.astimezone(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+            return move_out.replace(microsecond=0).isoformat()
+
+        return move_out.date().isoformat()
+    except ValueError:
+        return move_in_date
+
+
+@tool
+def search_properties(location: str = "", max_price: int | None = None, room_count: int | None = None) -> dict[str, Any]:
+    """Searches the property catalog by location, budget, and room count.
+
+    This tool calls the Next.js discovery endpoint at POST `/api/tools/search`.
+    The API supports open discovery, so it can be used before login. It returns
+    a list of matching properties with compact fields suitable for shortlist
+    generation and follow-up detail calls.
+
+    Args:
+        location: Free-text location filter such as a city, district, or area
+            name. Use an empty string to skip location filtering.
+        max_price: Optional upper budget limit in local currency. Pass `None`
+            to avoid price filtering.
+        room_count: Optional minimum number of rooms requested by the user.
+            Pass `None` when room constraints are not provided.
+
+    Returns:
+        dict[str, Any]: A normalized API result object.
+            - `ok` (bool): `True` when the API responded with 2xx.
+            - `status_code` (int): HTTP status code from the Next.js API.
+            - `data` (Any): Parsed response payload (usually a list of
+              properties when successful).
+            - `error` (str): Present only when the request failed.
+
+    When to use:
+        Use this first when the user asks to browse, compare, or narrow down
+        homes by budget and rooms before selecting a specific property ID.
+    """
+    payload: dict[str, Any] = {}
+
+    if location.strip():
+        payload["location"] = location.strip()
+    if max_price is not None:
+        payload["maxPrice"] = max_price
+    if room_count is not None:
+        payload["rooms"] = room_count
+
+    return _request("POST", "/api/tools/search", payload=payload)
+
+
+@tool
+def get_property_details(property_id: str) -> dict[str, Any]:
+    """Fetches full details for one property from the platform API.
+
+    This tool calls POST `/api/tools/details` and expects a property identifier.
+    The detailed response typically includes rich description fields, contact
+    references, amenities, rules, and availability metadata.
+
+    Args:
+        property_id: Unique property identifier from a prior search result or
+            user-provided reference.
+
+    Returns:
+        dict[str, Any]: A normalized API result object.
+            - `ok` (bool): `True` when details were retrieved successfully.
+            - `status_code` (int): HTTP response code.
+            - `data` (Any): Parsed property payload on success.
+            - `error` (str): Error message when the request fails, such as
+              missing ID, unknown property, or server issues.
+
+    When to use:
+        Use this immediately after the user selects a listing and asks for
+        exact details. Never invent missing fields; call this tool instead.
+    """
+    payload = {"propertyId": property_id}
+    return _request("POST", "/api/tools/details", payload=payload)
+
+
+@tool
+def check_session(user_token: str) -> dict[str, Any]:
+    """Validates whether a renter is currently logged in.
+
+    This tool calls GET `/api/auth/me` and forwards the session token as the
+    `lebihmudah_session` cookie. It should be used before protected actions,
+    especially booking, to ensure the user is authenticated.
+
+    Args:
+        user_token: Session token that was issued by the web app login flow.
+            The value is sent as the auth cookie to the Next.js API.
+
+    Returns:
+        dict[str, Any]: A normalized API result object.
+            - `ok` (bool): `True` when a valid authenticated session is found.
+            - `status_code` (int): HTTP response code from `/api/auth/me`.
+            - `data` (Any): Parsed user/session payload on success.
+            - `error` (str): Failure reason (for example `401` when token is
+              missing/expired, or network/server errors).
+
+    When to use:
+        Use this whenever the user asks to book, cancel, or perform any action
+        that requires identity verification.
+    """
+    cookies = _build_auth_cookies(user_token)
+    return _request("GET", "/api/auth/me", cookies=cookies)
+
+
+@tool
+def initiate_booking(property_id: str, user_token: str, move_in_date: str) -> dict[str, Any]:
+    """Creates a renter booking request for a property.
+
+    This tool calls POST `/api/tools/book`, sending the property identifier,
+    move-in date, and a derived move-out date (30 days after move-in). The
+    session token is forwarded as the `lebihmudah_session` cookie. The caller
+    must validate login via `check_session` before invoking this tool.
+
+    Args:
+        property_id: Target property identifier to be booked.
+        user_token: Auth token from the user session cookie.
+        move_in_date: Requested move-in date in ISO-like date or datetime text.
+            Example values: `2026-05-01` or `2026-05-01T00:00:00Z`.
+
+    Returns:
+        dict[str, Any]: A normalized API result object.
+            - `ok` (bool): `True` when the booking request was accepted.
+            - `status_code` (int): HTTP status code from the booking endpoint.
+            - `data` (Any): Booking payload when successful.
+            - `error` (str): Validation/conflict/auth/server failure reason.
+
+    When to use:
+        Use this only after identity is confirmed through `check_session` and
+        after collecting the user's booking date preference.
+    """
+    cookies = _build_auth_cookies(user_token)
+    payload = {
+        "propertyId": property_id,
+        "moveInDate": move_in_date,
+        "moveOutDate": _derive_move_out_date(move_in_date),
+    }
+    return _request("POST", "/api/tools/book", payload=payload, cookies=cookies)
+
+
+import os
+from langchain_anthropic import ChatAnthropic
+from langchain_core.messages import SystemMessage, HumanMessage
+
+@tool
+def message_owner(property_id: str, question: str) -> dict[str, Any]:
+    """Messages the property owner with a specific question to clarify details for the user.
+
+    Args:
+        property_id: Target property identifier.
+        question: The exact question you want to ask the property owner on behalf of the renter.
+
+    Returns:
+        dict[str, Any]: A normalized API result object containing the owner's reply.
+    """
+    # Simulate an "Owner Agent" responding to the "Renter Agent"
+    api_key = (os.getenv("ANTHROPIC_API_KEY") or os.getenv("ZHIPUAI_API_KEY") or "").strip()
+    base_url = os.getenv("ANTHROPIC_BASE_URL", "").strip().rstrip("/")
+    model = (os.getenv("ANTHROPIC_MODEL") or os.getenv("ZHIPUAI_MODEL") or "ilmu-glm-5.1").strip()
+    
+    if not api_key:
+        # Fallback to mock if no API key is available in the tool context
+        reply = f"Owner of {property_id} says: Yes, I can accommodate that. Let me know if the renter wants to proceed with booking!"
+    else:
+        try:
+            llm = ChatAnthropic(
+                model=model,
+                anthropic_api_key=api_key,
+                anthropic_api_url=base_url,
+                temperature=0.7,
+                max_tokens=256,
+            )
+            
+            system_prompt = (
+                f"You are the property owner for property ID: {property_id}. "
+                "A real estate agent is asking you a question on behalf of a potential renter. "
+                "You should answer the question reasonably. Ask 1 follow up question back to the renter if it makes sense "
+                "(e.g., asking about their move-in date, how many people, or their profession) to decide if you want to rent to them. "
+                "Keep your response concise."
+            )
+            
+            messages = [
+                SystemMessage(content=system_prompt),
+                HumanMessage(content=question)
+            ]
+            
+            response = llm.invoke(messages)
+            
+            final_text = response.content
+            if isinstance(final_text, list):
+                final_text = " ".join([block.get("text", "") for block in final_text if isinstance(block, dict) and block.get("type") == "text"])
+            reply = str(final_text).strip()
+        except Exception as e:
+            print(f"Owner agent simulation failed: {e}")
+            reply = f"Owner of {property_id} says: I'm currently unavailable, but yes we can discuss further."
+
+    return {
+        "ok": True,
+        "status_code": 200,
+        "data": {"reply": reply}
+    }
+
+
+@tool
+def request_loa(property_id: str, tenant_name: str) -> dict[str, Any]:
+    """Requests a Letter of Agreement (LOA) from the property owner when the user decides to proceed to rent.
+
+    Args:
+        property_id: Target property identifier.
+        tenant_name: The name of the tenant to put on the agreement.
+
+    Returns:
+        dict[str, Any]: A normalized API result object containing the LOA document text.
+    """
+    # Mocking LOA generation
+    loa_template = f"--- LETTER OF AGREEMENT ---\nProperty ID: {property_id}\nTenant: {tenant_name}\nTerms: 1 year lease, standard deposit.\nOwner Signature: [Electronically Signed by Owner]\n---------------------------"
+    return {
+        "ok": True,
+        "status_code": 200,
+        "data": {"loa_document": loa_template}
+    }
