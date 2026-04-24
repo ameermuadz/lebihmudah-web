@@ -93,6 +93,10 @@ type BookingWithRelations = {
     ownerId: string;
     title: string;
     location: string;
+    price: number;
+    rooms: number;
+    petsAllowed: boolean;
+    availabilityDate: string;
     images: Array<{ url: string; sortOrder: number }>;
   };
   user: { id: string; name: string } | null;
@@ -113,6 +117,10 @@ const mapBookingListItem = (
   propertyTitle: booking.property.title,
   propertyLocation: booking.property.location,
   propertyImage: getPrimaryImageUrl(booking.property.images),
+  propertyPrice: booking.property.price,
+  propertyRooms: booking.property.rooms,
+  propertyPetsAllowed: booking.property.petsAllowed,
+  propertyAvailabilityDate: booking.property.availabilityDate,
   userContact: booking.userContact,
   moveInDate: booking.moveInDate,
   moveOutDate: booking.moveOutDate,

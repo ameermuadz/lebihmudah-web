@@ -102,6 +102,8 @@ Property and booking tools:
 - `POST /api/tools/book`
 - `GET /api/owner/statistics`
 - `GET /api/owner/properties`
+- `GET /api/renter/bookings`
+- `PATCH /api/renter/bookings/[id]`
 - `PATCH /api/bookings/[id]`
 - `PATCH /api/owner/bookings/[id]`
 - `PATCH /api/owner/properties/[id]`
@@ -125,3 +127,4 @@ Agentic AI guide:
 - Search is intentionally open to anonymous users in the chatbot flow, while booking and owner actions should require login when the chatbot integration is wired.
 - Owners can fetch `/api/owner/statistics` for counts like total properties, pending bookings, booked bookings, and cancelled bookings before using other owner tools.
 - Owners can list their owned properties through `/api/owner/properties` before using editing or booking approval tools.
+- Renters can list their bookings through `/api/renter/bookings` and cancel them through `/api/renter/bookings/[id]` when the chatbot integration is wired.
