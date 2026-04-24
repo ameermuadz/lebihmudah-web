@@ -32,6 +32,18 @@ export interface OwnerMessage {
   resolvedAt?: string | null;
 }
 
+export interface OwnerStatistics {
+  properties: {
+    overall: number;
+  };
+  bookings: {
+    overall: number;
+    pending: number;
+    booked: number;
+    cancelled: number;
+  };
+}
+
 export interface SearchPayload {
   location?: string;
   maxPrice?: number;

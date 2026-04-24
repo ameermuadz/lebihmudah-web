@@ -42,6 +42,8 @@ The current repo only provides the UI shell and backend property/auth/booking en
 
 | Method  | Route                        | Use                                                       |
 | ------- | ---------------------------- | --------------------------------------------------------- |
+| `GET`   | `/api/owner/statistics`      | Get owner property and booking counts.                    |
+| `GET`   | `/api/owner/properties`      | List the logged-in owner's properties.                    |
 | `PATCH` | `/api/owner/properties/[id]` | Update a property owned by the logged-in owner.           |
 | `PATCH` | `/api/owner/bookings/[id]`   | Confirm or cancel a pending booking on an owned property. |
 
@@ -51,8 +53,19 @@ The current repo only provides the UI shell and backend property/auth/booking en
 2. Use `/api/tools/details` when the user asks for more information about a specific property.
 3. Before booking, prompt the user to log in and confirm the session through `/api/auth/me`.
 4. After login, call `/api/tools/book` for renter bookings.
-5. If the user is an owner, fetch their session with `/api/auth/me`, then allow property editing and approval actions through the owner routes.
+5. If the user is an owner, fetch their session with `/api/auth/me`, then use `/api/owner/statistics` for a quick summary and `/api/owner/properties` to list owned properties before allowing property editing and approval actions through the owner routes.
 6. Keep the UI theme-aware so the chatbot preview follows the app's light and dark mode switcher.
+
+## Owner Statistics Tool
+
+Use `/api/owner/statistics` when the chatbot needs a quick owner dashboard summary.
+
+The response groups counts into two blocks:
+
+- `properties.overall` for the total number of owned properties.
+- `bookings.overall`, `bookings.pending`, `bookings.booked`, and `bookings.cancelled` for the owner's booking totals.
+
+In chatbot wording, `booked` means confirmed bookings.
 
 ## Reserved Integration Point
 
