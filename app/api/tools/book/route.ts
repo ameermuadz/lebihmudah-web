@@ -24,6 +24,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const moveIn = new Date(body.moveInDate);
+    const moveOut = new Date(body.moveOutDate);
+
+    if (isNaN(moveIn.getTime()) || isNaN(moveOut.getTime())) {
+      return NextResponse.json(
+        { error: "Invalid date format" },
+        { status: 400 },
+      );
+    }
+
+    if (moveOut <= moveIn) {
+      return NextResponse.json(
+        { error: "Move-out date must be strictly later than move-in date" },
+        { status: 400 },
+      );
+    }
+
     const userContact = session?.user.email ?? body.userContact;
 
     if (!userContact) {

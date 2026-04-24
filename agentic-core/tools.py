@@ -1,10 +1,20 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
 from typing import Any
 
 import requests
+import logging
+import json
 from langchain_core.tools import tool
+
+# Set up logging to a file for API calls
+api_logger = logging.getLogger("api_calls")
+api_logger.setLevel(logging.INFO)
+file_handler = logging.FileHandler("api_calls.log")
+file_handler.setFormatter(logging.Formatter("%(asctime)s - %(message)s"))
+if not api_logger.handlers:
+    api_logger.addHandler(file_handler)
 
 BASE_URL = "http://localhost:3000"
 AUTH_COOKIE_NAME = "lebihmudah_session"
@@ -31,6 +41,14 @@ def _request(
     cookies: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     url = f"{BASE_URL}{path}"
+    
+    # Log the API call and its body
+    log_msg = f"{method} {path}"
+    if payload:
+        log_msg += f" - Body: {json.dumps(payload)}"
+    api_logger.info(log_msg)
+    print(f"API CALL LOG: {log_msg}")  # Also print to terminal so you can see it instantly
+    
     try:
         response = requests.request(
             method=method,
@@ -68,20 +86,7 @@ def _request(
     }
 
 
-def _derive_move_out_date(move_in_date: str) -> str:
-    try:
-        normalized = move_in_date.replace("Z", "+00:00")
-        parsed = datetime.fromisoformat(normalized)
-        move_out = parsed + timedelta(days=30)
 
-        if "T" in move_in_date:
-            if move_in_date.endswith("Z"):
-                return move_out.astimezone(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
-            return move_out.replace(microsecond=0).isoformat()
-
-        return move_out.date().isoformat()
-    except ValueError:
-        return move_in_date
 
 
 @tool
@@ -182,19 +187,21 @@ def check_session(user_token: str) -> dict[str, Any]:
 
 
 @tool
-def initiate_booking(property_id: str, user_token: str, move_in_date: str) -> dict[str, Any]:
+def initiate_booking(property_id: str, user_token: str, move_in_date: str, move_out_date: str) -> dict[str, Any]:
     """Creates a renter booking request for a property.
 
     This tool calls POST `/api/tools/book`, sending the property identifier,
-    move-in date, and a derived move-out date (30 days after move-in). The
-    session token is forwarded as the `lebihmudah_session` cookie. The caller
-    must validate login via `check_session` before invoking this tool.
+    move-in date, and the move-out date explicitly provided by the user. 
+    The session token is forwarded as the `lebihmudah_session` cookie. 
+    The caller must validate login via `check_session` before invoking this tool.
 
     Args:
         property_id: Target property identifier to be booked.
         user_token: Auth token from the user session cookie.
         move_in_date: Requested move-in date in ISO-like date or datetime text.
             Example values: `2026-05-01` or `2026-05-01T00:00:00Z`.
+        move_out_date: Requested move-out date in ISO-like date or datetime text.
+            Example values: `2026-06-01` or `2026-06-01T00:00:00Z`.
 
     Returns:
         dict[str, Any]: A normalized API result object.
@@ -205,13 +212,13 @@ def initiate_booking(property_id: str, user_token: str, move_in_date: str) -> di
 
     When to use:
         Use this only after identity is confirmed through `check_session` and
-        after collecting the user's booking date preference.
+        after explicitly collecting both the move-in and move-out dates from the user.
     """
     cookies = _build_auth_cookies(user_token)
     payload = {
         "propertyId": property_id,
         "moveInDate": move_in_date,
-        "moveOutDate": _derive_move_out_date(move_in_date),
+        "moveOutDate": move_out_date,
     }
     return _request("POST", "/api/tools/book", payload=payload, cookies=cookies)
 
@@ -297,3 +304,112 @@ def request_loa(property_id: str, tenant_name: str) -> dict[str, Any]:
         "status_code": 200,
         "data": {"loa_document": loa_template}
     }
+
+
+@tool
+def get_owner_dashboard() -> dict[str, Any]:
+    """Retrieves the property owner's dashboard statistics and pending actions.
+    
+    Returns:
+        dict[str, Any]: Mock data containing views, pending inquiries, and active bookings.
+    """
+    return {
+        "ok": True,
+        "status_code": 200,
+        "data": {
+            "total_properties": 2,
+            "total_views": 150,
+            "pending_inquiries": 3,
+            "active_bookings": 1
+        }
+    }
+
+
+@tool
+def manage_booking(booking_id: str, action: str, user_token: str | None = None) -> dict[str, Any]:
+    """Approves or cancels a pending booking request on an owned property.
+    
+    Args:
+        booking_id: The ID of the booking to manage.
+        action: Must be 'confirm' or 'cancel'.
+        user_token: System injected auth token.
+    """
+    if not user_token:
+        return {"ok": False, "error": "Login required. Please ask the user to login."}
+        
+    try:
+        cookies = {"lebihmudah_session": user_token}
+        payload = {"action": action}
+        
+        log_msg = f"PATCH /api/owner/bookings/{booking_id} - Body: {json.dumps(payload)}"
+        api_logger.info(log_msg)
+        print(f"API CALL LOG: {log_msg}")
+
+        response = requests.patch(
+            f"http://localhost:3000/api/owner/bookings/{booking_id}",
+            json=payload,
+            cookies=cookies,
+            timeout=10,
+        )
+        data = response.json() if response.text else {}
+        return {
+            "ok": response.ok,
+            "status_code": response.status_code,
+            "data": data,
+        }
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
+@tool
+def update_property(property_id: str, title: str, location: str, price: float, rooms: int, pets_allowed: bool, description: str, availability_date: str, amenities: list[str], rules: list[str], user_token: str | None = None) -> dict[str, Any]:
+    """Updates a property owned by the logged-in owner.
+    
+    Args:
+        property_id: The ID of the property to update.
+        title: Title of the property.
+        location: Location of the property.
+        price: Monthly rent price.
+        rooms: Number of rooms.
+        pets_allowed: Whether pets are allowed.
+        description: Description of the property.
+        availability_date: YYYY-MM-DD date when the property is available.
+        amenities: List of amenities strings.
+        rules: List of rules strings.
+        user_token: System injected auth token.
+    """
+    if not user_token:
+        return {"ok": False, "error": "Login required. Please ask the user to login."}
+        
+    try:
+        cookies = {"lebihmudah_session": user_token}
+        payload = {
+            "title": title,
+            "location": location,
+            "price": price,
+            "rooms": rooms,
+            "petsAllowed": pets_allowed,
+            "description": description,
+            "availabilityDate": availability_date,
+            "amenities": amenities,
+            "rules": rules
+        }
+        
+        log_msg = f"PATCH /api/owner/properties/{property_id} - Body: {json.dumps(payload)}"
+        api_logger.info(log_msg)
+        print(f"API CALL LOG: {log_msg}")
+
+        response = requests.patch(
+            f"http://localhost:3000/api/owner/properties/{property_id}",
+            json=payload,
+            cookies=cookies,
+            timeout=10,
+        )
+        data = response.json() if response.text else {}
+        return {
+            "ok": response.ok,
+            "status_code": response.status_code,
+            "data": data,
+        }
+    except Exception as e:
+        return {"ok": False, "error": str(e)}

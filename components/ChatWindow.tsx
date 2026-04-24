@@ -35,6 +35,7 @@ export default function ChatWindow() {
   const [isInitializing, setIsInitializing] = useState(true);
   const [sessionId, setSessionId] = useState<string>("");
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -57,6 +58,7 @@ export default function ChatWindow() {
           const data = await res.json();
           if (data && data.user && data.user.id) {
             setIsLoggedIn(true);
+            setUserRole(data.user.role || "USER");
             currentSessionId = `user-${data.user.id}`;
           }
         }
@@ -120,7 +122,7 @@ export default function ChatWindow() {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessionId, message: userMessage.text }),
+        body: JSON.stringify({ sessionId, message: userMessage.text, userRole }),
       });
 
       if (!res.ok) {
@@ -181,7 +183,9 @@ export default function ChatWindow() {
                 ? "rounded-full bg-emerald-100 px-3 py-1 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200"
                 : "rounded-full bg-zinc-200 px-3 py-1 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
             }>
-              {isLoggedIn ? "Booking: authorized" : "Booking: login required"}
+              {isLoggedIn 
+                ? (userRole === "OWNER" ? "Owner Tools: authorized" : "Booking: authorized") 
+                : "Booking/Owner Tools: login required"}
             </span>
           </div>
         </div>

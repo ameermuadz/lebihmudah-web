@@ -44,3 +44,9 @@ generated/prisma/
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# agentic-core
+agentic-core/api_calls.log
+agentic-core/chat_history.db
+agentic-core/*.log
+agentic-core/*.db

@@ -7,9 +7,9 @@ from typing import Any
 from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, ToolMessage
 from memory import SessionMemoryManager
-from tools import check_session, get_property_details, initiate_booking, search_properties, message_owner, request_loa
+from tools import check_session, get_property_details, initiate_booking, search_properties, message_owner, request_loa, get_owner_dashboard, manage_booking, update_property
 
-SYSTEM_PROMPT = """You are the LebihMudah Agentic Core assistant, a smart real estate agent designed to handle property rentals end-to-end.
+RENTER_SYSTEM_PROMPT = """You are the LebihMudah Agentic Core assistant, a smart real estate agent designed to handle property rentals end-to-end for renters.
 
 Follow this workflow strictly:
 1. If the user asks to find a house with specific filters (e.g. rent < RM1000, 2 people), use `search_properties`. 
@@ -29,7 +29,17 @@ Other rules:
 - Always verify login with check_session before initiating any booking.
 """
 
-TOOLS = [search_properties, get_property_details, check_session, initiate_booking, message_owner, request_loa]
+OWNER_SYSTEM_PROMPT = """You are the LebihMudah Agentic Core assistant, a smart real estate agent designed to help property owners manage their listings.
+
+Follow this workflow strictly:
+1. If the owner asks for an overview or stats of their properties, use `get_owner_dashboard`.
+2. If they ask to manage a booking request (confirm or cancel), use `manage_booking`.
+3. If they ask to update a property they own, use `update_property`. Make sure you gather all required fields from them or the existing property details before calling the tool.
+4. Provide helpful insights on their properties and pending actions.
+"""
+
+RENTER_TOOLS = [search_properties, get_property_details, check_session, initiate_booking, message_owner, request_loa]
+OWNER_TOOLS = [check_session, get_owner_dashboard, manage_booking, update_property]
 MAX_TOOL_ROUNDS = 6
 
 
@@ -53,9 +63,13 @@ def _serialize_tool_result(result: Any) -> str:
     return str(result)
 
 
-def run_agent(session_id: str, message: str, user_token: str | None) -> str:
+def run_agent(session_id: str, message: str, user_token: str | None, user_role: str | None = "USER") -> str:
     """Runs the GLM agent with tool-calling and SQLite-backed session memory using LangChain."""
     memory = SessionMemoryManager()
+    
+    is_owner = (user_role == "OWNER")
+    system_prompt = OWNER_SYSTEM_PROMPT if is_owner else RENTER_SYSTEM_PROMPT
+    active_tools = OWNER_TOOLS if is_owner else RENTER_TOOLS
     
     api_key = (
         os.getenv("ANTHROPIC_API_KEY")
@@ -93,11 +107,11 @@ def run_agent(session_id: str, message: str, user_token: str | None) -> str:
         max_tokens=max_tokens,
         temperature=0.2,
     )
-    llm_with_tools = llm.bind_tools(TOOLS)
+    llm_with_tools = llm.bind_tools(active_tools)
 
     history = memory.get_history(session_id, limit=20)
     
-    messages: list[Any] = [SystemMessage(content=SYSTEM_PROMPT)]
+    messages: list[Any] = [SystemMessage(content=system_prompt)]
     messages.extend(_history_to_messages(history))
     
     runtime_token = user_token or ""
@@ -111,7 +125,8 @@ def run_agent(session_id: str, message: str, user_token: str | None) -> str:
                 f"- session_id: {session_id}\n"
                 f"- user_token_status: {runtime_token_status}\n"
                 "For booking requests, call check_session first and only then call initiate_booking. "
-                "The backend injects the actual token into tool calls automatically."
+                "The backend injects the actual token into tool calls automatically. "
+                "IMPORTANT: You must explicitly ask the user for BOTH their move-in and move-out dates before booking."
             )
         )
     )
@@ -136,7 +151,7 @@ def run_agent(session_id: str, message: str, user_token: str | None) -> str:
             tool_name = tool_call["name"]
             tool_args = dict(tool_call["args"])
             
-            tool = next((t for t in TOOLS if t.name == tool_name), None)
+            tool = next((t for t in active_tools if t.name == tool_name), None)
             if not tool:
                 messages.append(
                     ToolMessage(
@@ -148,7 +163,7 @@ def run_agent(session_id: str, message: str, user_token: str | None) -> str:
                 )
                 continue
 
-            if tool_name in {"check_session", "initiate_booking"} and not tool_args.get("user_token"):
+            if tool_name in {"check_session", "initiate_booking", "manage_booking", "update_property"}:
                 tool_args["user_token"] = runtime_token
 
             result_str = ""

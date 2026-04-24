@@ -3,7 +3,7 @@ import { AUTH_COOKIE_NAME } from "@/lib/auth";
 
 export async function POST(request: NextRequest) {
   try {
-    const { sessionId, message } = await request.json();
+    const { sessionId, message, userRole } = await request.json();
     
     if (!sessionId || !message) {
       return NextResponse.json(
@@ -18,6 +18,7 @@ export async function POST(request: NextRequest) {
       session_id: sessionId,
       message: message,
       user_token: token,
+      user_role: userRole || "USER",
     };
 
     const response = await fetch("http://localhost:8000/api/chat", {

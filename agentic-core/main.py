@@ -34,6 +34,7 @@ class ChatRequest(BaseModel):
     session_id: str = Field(..., min_length=1)
     message: str = Field(..., min_length=1)
     user_token: str | None = None
+    user_role: str | None = "USER"
 
 
 class OwnerReplyWebhookRequest(BaseModel):
@@ -64,6 +65,7 @@ def chat(payload: ChatRequest) -> AgentResponse:
             session_id=payload.session_id,
             message=payload.message,
             user_token=payload.user_token,
+            user_role=payload.user_role,
         )
         return AgentResponse(response=response_text)
     except Exception as exc:
