@@ -338,10 +338,12 @@ export default function ChatWindow() {
             LebihMudah Agent
           </p>
           <h1 className="mt-2 text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-            Agentic AI Assistant
+            {userRole === "OWNER" ? "Owner Agent Assistant" : "Agentic AI Assistant"}
           </h1>
           <p className="mt-2 max-w-3xl text-sm text-zinc-600 dark:text-zinc-400">
-            Search properties, inquire with owners, and initiate bookings.
+            {userRole === "OWNER"
+              ? "Manage your properties, respond to renter inquiries, and track bookings."
+              : "Search properties, inquire with owners, and initiate bookings."}
           </p>
           <div className="mt-4 flex flex-wrap gap-2 text-xs font-medium">
             <span className="rounded-full bg-emerald-100 px-3 py-1 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200">
