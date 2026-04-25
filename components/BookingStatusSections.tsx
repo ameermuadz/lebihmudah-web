@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type { BookingStatus } from "@/lib/types";
 
 export type BookingStatusSectionItem = {
@@ -15,6 +16,8 @@ export type BookingStatusSectionItem = {
   createdAt: string;
   userId?: string | null;
   userName?: string | null;
+  loaPdfUrl?: string | null;
+  loaGeneratedAt?: string | null;
 };
 
 interface BookingStatusSectionsProps {
@@ -75,6 +78,7 @@ export default function BookingStatusSections({
   showPropertyLinks = true,
   visibleStatuses = ["PENDING", "CONFIRMED", "CANCELLED"],
 }: BookingStatusSectionsProps) {
+  const router = useRouter();
   const sections = STATUS_ORDER.filter((section) =>
     visibleStatuses.includes(section.value),
   ).map((section) => ({
@@ -154,6 +158,18 @@ export default function BookingStatusSections({
                   return (
                     <article
                       key={booking.confirmationId}
+                      role="link"
+                      tabIndex={0}
+                      aria-label={`Open booking details for ${bookingPropertyTitle}`}
+                      onClick={() =>
+                        router.push(`/bookings/${booking.confirmationId}`)
+                      }
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          router.push(`/bookings/${booking.confirmationId}`);
+                        }
+                      }}
                       className={`rounded-[28px] border bg-zinc-50 p-4 shadow-sm transition hover:bg-white dark:bg-zinc-950 dark:hover:bg-zinc-900 md:p-5 ${section.borderClassName}`}
                     >
                       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
@@ -161,6 +177,7 @@ export default function BookingStatusSections({
                           {showPropertyLinks && booking.propertyTitle ? (
                             <Link
                               href={`/properties/${booking.propertyId}`}
+                              onClick={(event) => event.stopPropagation()}
                               className="block truncate text-lg font-semibold text-zinc-900 transition hover:text-emerald-700 dark:text-zinc-100 dark:hover:text-emerald-300"
                             >
                               {bookingPropertyTitle}

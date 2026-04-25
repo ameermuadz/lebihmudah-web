@@ -33,21 +33,23 @@ The current repo only provides the UI shell and backend property/auth/booking en
 
 ### Renter actions
 
-| Method  | Route                       | Use                                                                    |
-| ------- | --------------------------- | ---------------------------------------------------------------------- |
-| `POST`  | `/api/tools/book`           | Create a booking request. The chatbot should gate this behind login.   |
-| `GET`   | `/api/renter/bookings`      | List the logged-in renter's bookings with property details and status. |
-| `PATCH` | `/api/renter/bookings/[id]` | Cancel a renter booking.                                               |
+| Method  | Route                           | Use                                                                    |
+| ------- | ------------------------------- | ---------------------------------------------------------------------- |
+| `POST`  | `/api/tools/book`               | Create a booking request. The chatbot should gate this behind login.   |
+| `GET`   | `/api/renter/bookings`          | List the logged-in renter's bookings with property details and status. |
+| `GET`   | `/api/renter/bookings/[id]/loa` | Get the LOA PDF attachment for a renter's confirmed booking.           |
+| `PATCH` | `/api/renter/bookings/[id]`     | Cancel a renter booking.                                               |
 
 ### Owner actions
 
-| Method  | Route                        | Use                                                       |
-| ------- | ---------------------------- | --------------------------------------------------------- |
-| `GET`   | `/api/owner/statistics`      | Get owner property and booking counts.                    |
-| `GET`   | `/api/owner/bookings`        | List bookings across the owner's properties.              |
-| `GET`   | `/api/owner/properties`      | List the logged-in owner's properties.                    |
-| `PATCH` | `/api/owner/properties/[id]` | Update a property owned by the logged-in owner.           |
-| `PATCH` | `/api/owner/bookings/[id]`   | Confirm or cancel a pending booking on an owned property. |
+| Method  | Route                          | Use                                                          |
+| ------- | ------------------------------ | ------------------------------------------------------------ |
+| `GET`   | `/api/owner/statistics`        | Get owner property and booking counts.                       |
+| `GET`   | `/api/owner/bookings`          | List bookings across the owner's properties.                 |
+| `GET`   | `/api/owner/bookings/[id]/loa` | Get the LOA PDF attachment for an owner's confirmed booking. |
+| `GET`   | `/api/owner/properties`        | List the logged-in owner's properties.                       |
+| `PATCH` | `/api/owner/properties/[id]`   | Update a property owned by the logged-in owner.              |
+| `PATCH` | `/api/owner/bookings/[id]`     | Confirm or cancel a pending booking on an owned property.    |
 
 ## Suggested Chatbot Flow
 
@@ -55,8 +57,8 @@ The current repo only provides the UI shell and backend property/auth/booking en
 2. Use `/api/tools/details` when the user asks for more information about a specific property.
 3. Before booking, prompt the user to log in and confirm the session through `/api/auth/me`.
 4. After login, call `/api/tools/book` for new renter booking requests.
-5. When the user asks about existing reservations, call `/api/renter/bookings` to list their bookings and `/api/renter/bookings/[id]` to cancel one.
-6. If the user is an owner, fetch their session with `/api/auth/me`, then use `/api/owner/statistics` for a quick summary, `/api/owner/properties` to list owned properties, and `/api/owner/bookings` to inspect booking items before allowing property editing and approval actions through the owner routes.
+5. When the user asks about existing reservations, call `/api/renter/bookings` to list their bookings, `/api/renter/bookings/[id]/loa` for confirmed booking agreements, and `/api/renter/bookings/[id]` to cancel one.
+6. If the user is an owner, fetch their session with `/api/auth/me`, then use `/api/owner/statistics` for a quick summary, `/api/owner/properties` to list owned properties, `/api/owner/bookings` to inspect booking items, and `/api/owner/bookings/[id]/loa` for the agreement PDF before allowing property editing and approval actions through the owner routes.
 7. Keep the UI theme-aware so the chatbot preview follows the app's light and dark mode switcher.
 
 ## Renter Booking Tool
@@ -77,6 +79,14 @@ Each returned item includes booking fields plus property details such as:
 - `status`
 
 Use `/api/renter/bookings/[id]` to cancel one of those bookings when the user confirms the action.
+
+## LOA Tool
+
+Use `/api/renter/bookings/[id]/loa` or `/api/owner/bookings/[id]/loa` when the chatbot needs the attachment for a specific confirmed booking.
+
+The route returns the LOA PDF URL plus the generated timestamp, and it only serves confirmed bookings.
+
+The booking list items also expose `loaPdfUrl` and `loaGeneratedAt` so the chatbot can surface the attachment from the normal booking lists.
 
 ## Owner Statistics Tool
 

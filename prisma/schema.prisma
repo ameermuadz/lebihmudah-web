@@ -115,6 +115,8 @@ model Booking {
   moveInDate  String
   moveOutDate String
   status      String   @default("PENDING")
+  loaPdfUrl   String?
+  loaGeneratedAt DateTime?
   createdAt   DateTime @default(now())
   property    Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
   user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)

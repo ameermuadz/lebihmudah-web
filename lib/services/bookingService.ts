@@ -4,6 +4,7 @@ import {
   BookingStatus,
   OwnerBookingSummary,
 } from "@/lib/types";
+import { ensureBookingLoa } from "@/lib/services/loaService";
 
 export class BookingRangeError extends Error {
   constructor(message: string) {
@@ -92,6 +93,8 @@ type BookingWithRelations = {
   moveOutDate: string;
   status: string;
   createdAt: Date;
+  loaPdfUrl: string | null;
+  loaGeneratedAt: Date | null;
   property: {
     id: string;
     ownerId: string;
@@ -132,7 +135,31 @@ const mapBookingListItem = (
   createdAt: booking.createdAt.toISOString(),
   userId: booking.userId,
   userName: booking.user?.name ?? null,
+  loaPdfUrl: booking.loaPdfUrl,
+  loaGeneratedAt: booking.loaGeneratedAt?.toISOString() ?? null,
 });
+
+const hydrateBookingLoa = async (booking: BookingWithRelations) => {
+  if (booking.status !== "CONFIRMED") {
+    return booking;
+  }
+
+  if (booking.loaPdfUrl && booking.loaGeneratedAt) {
+    return booking;
+  }
+
+  const attachment = await ensureBookingLoa(booking.id);
+
+  if (!attachment) {
+    return booking;
+  }
+
+  return {
+    ...booking,
+    loaPdfUrl: attachment.loaPdfUrl,
+    loaGeneratedAt: new Date(attachment.loaGeneratedAt),
+  };
+};
 
 export async function createBooking(
   input: CreateBookingInput,
@@ -253,7 +280,11 @@ export async function getUserBookings(
     orderBy: [{ moveInDate: "asc" }, { createdAt: "desc" }],
   });
 
-  return bookings.map((booking) => mapBookingListItem(booking));
+  const hydratedBookings = await Promise.all(
+    bookings.map((booking) => hydrateBookingLoa(booking)),
+  );
+
+  return hydratedBookings.map((booking) => mapBookingListItem(booking));
 }
 
 export async function getOwnerBookings(
@@ -281,7 +312,11 @@ export async function getOwnerBookings(
     orderBy: [{ createdAt: "desc" }],
   });
 
-  return bookings.map((booking) => mapBookingListItem(booking));
+  const hydratedBookings = await Promise.all(
+    bookings.map((booking) => hydrateBookingLoa(booking)),
+  );
+
+  return hydratedBookings.map((booking) => mapBookingListItem(booking));
 }
 
 export async function getOwnerBookingSummaries(
@@ -418,7 +453,9 @@ export async function updateBookingStatus(input: {
     },
   });
 
-  return mapBookingListItem(updatedBooking);
+  const hydratedBooking = await hydrateBookingLoa(updatedBooking);
+
+  return mapBookingListItem(hydratedBooking);
 }
 
 export async function cancelBooking(input: {

@@ -102,8 +102,10 @@ Property and booking tools:
 - `POST /api/tools/book`
 - `GET /api/owner/statistics`
 - `GET /api/owner/bookings`
+- `GET /api/owner/bookings/[id]/loa`
 - `GET /api/owner/properties`
 - `GET /api/renter/bookings`
+- `GET /api/renter/bookings/[id]/loa`
 - `PATCH /api/renter/bookings/[id]`
 - `PATCH /api/bookings/[id]`
 - `PATCH /api/owner/bookings/[id]`
@@ -129,4 +131,5 @@ Agentic AI guide:
 - Owners can fetch `/api/owner/statistics` for counts like total properties, pending bookings, booked bookings, and cancelled bookings before using other owner tools.
 - Owners can fetch `/api/owner/bookings` to review booking IDs, property IDs, statuses, and renter details before approving or cancelling bookings.
 - Owners can list their owned properties through `/api/owner/properties` before using editing or booking approval tools.
-- Renters can list their bookings through `/api/renter/bookings` and cancel them through `/api/renter/bookings/[id]` when the chatbot integration is wired.
+- Renters can list their bookings through `/api/renter/bookings`, open the LOA attachment through `/api/renter/bookings/[id]/loa`, and cancel them through `/api/renter/bookings/[id]` when the chatbot integration is wired.
+- Confirmed bookings now store and expose an LOA PDF attachment through the booking detail cards and LOA routes for both renter and owner flows.

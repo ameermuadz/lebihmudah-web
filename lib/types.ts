@@ -44,6 +44,12 @@ export interface OwnerStatistics {
   };
 }
 
+export interface BookingLoaAttachment {
+  bookingId: string;
+  loaPdfUrl: string;
+  loaGeneratedAt: string;
+}
+
 export interface SearchPayload {
   location?: string;
   maxPrice?: number;
@@ -123,6 +129,8 @@ export interface BookingListItem {
   createdAt: string;
   userId?: string | null;
   userName?: string | null;
+  loaPdfUrl?: string | null;
+  loaGeneratedAt?: string | null;
 }
 
 export interface OwnerBookingSummary extends BookingListItem {
