@@ -1,6 +1,14 @@
 "use client";
 
+import ReactMarkdown from "react-markdown";
 import { useState, useRef, useEffect } from "react";
+import remarkGfm from "remark-gfm";
+
+type MarkdownComponentProps = {
+  children?: React.ReactNode;
+  href?: string;
+  inline?: boolean;
+};
 
 type ChatMessage = {
   id: string;
@@ -28,6 +36,104 @@ const DEFAULT_MESSAGES: ChatMessage[] = [
   },
 ];
 
+const markdownComponents = {
+  p: ({ children }: MarkdownComponentProps) => (
+    <p className="whitespace-pre-wrap">{children}</p>
+  ),
+  strong: ({ children }: MarkdownComponentProps) => (
+    <strong className="font-semibold text-inherit">{children}</strong>
+  ),
+  em: ({ children }: MarkdownComponentProps) => (
+    <em className="italic text-inherit">{children}</em>
+  ),
+  a: ({ href, children }: MarkdownComponentProps) => (
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      className="text-emerald-700 underline underline-offset-2 dark:text-emerald-300"
+    >
+      {children}
+    </a>
+  ),
+  ul: ({ children }: MarkdownComponentProps) => (
+    <ul className="ml-5 list-disc space-y-1">{children}</ul>
+  ),
+  ol: ({ children }: MarkdownComponentProps) => (
+    <ol className="ml-5 list-decimal space-y-1">{children}</ol>
+  ),
+  li: ({ children }: MarkdownComponentProps) => (
+    <li className="pl-1">{children}</li>
+  ),
+  blockquote: ({ children }: MarkdownComponentProps) => (
+    <blockquote className="border-l-4 border-emerald-500/40 pl-4 italic text-zinc-700 dark:text-zinc-300">
+      {children}
+    </blockquote>
+  ),
+  h1: ({ children }: MarkdownComponentProps) => (
+    <h1 className="text-base font-semibold text-inherit">{children}</h1>
+  ),
+  h2: ({ children }: MarkdownComponentProps) => (
+    <h2 className="text-sm font-semibold text-inherit">{children}</h2>
+  ),
+  h3: ({ children }: MarkdownComponentProps) => (
+    <h3 className="text-sm font-semibold text-inherit">{children}</h3>
+  ),
+  hr: () => <hr className="border-zinc-300 dark:border-zinc-700" />,
+  table: ({ children }: MarkdownComponentProps) => (
+    <div className="overflow-x-auto">
+      <table className="w-full border-collapse text-left text-sm">
+        {children}
+      </table>
+    </div>
+  ),
+  thead: ({ children }: MarkdownComponentProps) => (
+    <thead className="bg-black/5 dark:bg-white/10">{children}</thead>
+  ),
+  th: ({ children }: MarkdownComponentProps) => (
+    <th className="border border-zinc-200 px-3 py-2 font-semibold text-zinc-900 dark:border-zinc-700 dark:text-zinc-100">
+      {children}
+    </th>
+  ),
+  td: ({ children }: MarkdownComponentProps) => (
+    <td className="border border-zinc-200 px-3 py-2 dark:border-zinc-700">
+      {children}
+    </td>
+  ),
+  pre: ({ children }: MarkdownComponentProps) => (
+    <pre className="overflow-x-auto rounded-2xl bg-zinc-950/90 p-0 text-xs leading-5 text-zinc-100 dark:bg-black/70">
+      {children}
+    </pre>
+  ),
+  code: ({ inline, children }: MarkdownComponentProps) =>
+    inline ? (
+      <code className="rounded bg-black/5 px-1 py-0.5 font-mono text-[0.92em] text-inherit dark:bg-white/10">
+        {children}
+      </code>
+    ) : (
+      <code className="block whitespace-pre-wrap rounded-2xl bg-transparent px-4 py-4 font-mono text-xs leading-5 text-zinc-100">
+        {children}
+      </code>
+    ),
+} as const;
+
+function ChatMessageBody({ message }: { message: ChatMessage }) {
+  if (message.role !== "agent") {
+    return <p className="whitespace-pre-wrap">{message.text}</p>;
+  }
+
+  return (
+    <div className="space-y-3 break-words">
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={markdownComponents}
+      >
+        {message.text}
+      </ReactMarkdown>
+    </div>
+  );
+}
+
 export default function ChatWindow() {
   const [messages, setMessages] = useState<ChatMessage[]>(DEFAULT_MESSAGES);
   const [input, setInput] = useState("");
@@ -50,7 +156,7 @@ export default function ChatWindow() {
   useEffect(() => {
     const initializeChat = async () => {
       let currentSessionId = "";
-      
+
       // Check auth status
       try {
         const res = await fetch("/api/auth/me");
@@ -70,13 +176,15 @@ export default function ChatWindow() {
       if (!currentSessionId) {
         currentSessionId = `guest-${generateSessionId()}`;
       }
-      
+
       setSessionId(currentSessionId);
 
       // Only fetch history if we are logged in (guest sessions are always fresh)
       if (currentSessionId.startsWith("user-")) {
         try {
-          const res = await fetch(`/api/chat/history?sessionId=${currentSessionId}`);
+          const res = await fetch(
+            `/api/chat/history?sessionId=${currentSessionId}`,
+          );
           if (res.ok) {
             const data = await res.json();
             if (Array.isArray(data) && data.length > 0) {
@@ -85,9 +193,15 @@ export default function ChatWindow() {
                 role: msg.role === "assistant" ? "agent" : msg.role,
                 text: msg.content,
               }));
-              
-              const filteredMessages = mappedMessages.filter(m => !(m.role === "system" || (m.role === "user" && m.text.startsWith("[System Update:"))));
-              
+
+              const filteredMessages = mappedMessages.filter(
+                (m) =>
+                  !(
+                    m.role === "system" ||
+                    (m.role === "user" && m.text.startsWith("[System Update:"))
+                  ),
+              );
+
               if (filteredMessages.length > 0) {
                 setMessages(filteredMessages);
               }
@@ -97,7 +211,7 @@ export default function ChatWindow() {
           console.error("Failed to load chat history:", err);
         }
       }
-      
+
       setIsInitializing(false);
     };
 
@@ -122,7 +236,11 @@ export default function ChatWindow() {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessionId, message: userMessage.text, userRole }),
+        body: JSON.stringify({
+          sessionId,
+          message: userMessage.text,
+          userRole,
+        }),
       });
 
       if (!res.ok) {
@@ -130,7 +248,7 @@ export default function ChatWindow() {
       }
 
       const data = await res.json();
-      
+
       const agentMessage: ChatMessage = {
         id: Math.random().toString(36),
         role: "agent",
@@ -178,19 +296,23 @@ export default function ChatWindow() {
             <span className="rounded-full bg-emerald-100 px-3 py-1 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200">
               Search: public
             </span>
-            <span className={
-              isLoggedIn
-                ? "rounded-full bg-emerald-100 px-3 py-1 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200"
-                : "rounded-full bg-zinc-200 px-3 py-1 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
-            }>
-              {isLoggedIn 
-                ? (userRole === "OWNER" ? "Owner Tools: authorized" : "Booking: authorized") 
+            <span
+              className={
+                isLoggedIn
+                  ? "rounded-full bg-emerald-100 px-3 py-1 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200"
+                  : "rounded-full bg-zinc-200 px-3 py-1 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+              }
+            >
+              {isLoggedIn
+                ? userRole === "OWNER"
+                  ? "Owner Tools: authorized"
+                  : "Booking: authorized"
                 : "Booking/Owner Tools: login required"}
             </span>
           </div>
         </div>
         <div className="mt-4 sm:mt-0">
-          <button 
+          <button
             onClick={handleClearChat}
             className="text-xs px-3 py-1.5 rounded-lg border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 dark:border-red-900/30 dark:bg-red-950/30 dark:text-red-400 dark:hover:bg-red-900/50 transition-colors"
           >
@@ -202,27 +324,34 @@ export default function ChatWindow() {
       <div className="flex-1 space-y-3 overflow-y-auto bg-slate-50 px-4 py-5 dark:bg-zinc-950">
         {isInitializing ? (
           <div className="flex h-full items-center justify-center">
-            <p className="text-sm text-zinc-500 animate-pulse">Loading chat history...</p>
+            <p className="text-sm text-zinc-500 animate-pulse">
+              Loading chat history...
+            </p>
           </div>
         ) : (
           messages.map((message) => (
             <article
               key={message.id}
-              className={`w-full max-w-[82%] rounded-2xl px-4 py-3 text-sm leading-6 whitespace-pre-wrap ${bubbleClassByRole[message.role]}`}
+              className={`w-full max-w-[82%] rounded-2xl px-4 py-3 text-sm leading-6 whitespace-normal ${bubbleClassByRole[message.role]}`}
             >
-              <p>{message.text}</p>
+              <ChatMessageBody message={message} />
             </article>
           ))
         )}
         {isLoading && (
-          <article className={`w-full max-w-[82%] rounded-2xl px-4 py-3 text-sm leading-6 ${bubbleClassByRole.agent}`}>
+          <article
+            className={`w-full max-w-[82%] rounded-2xl px-4 py-3 text-sm leading-6 ${bubbleClassByRole.agent}`}
+          >
             <p className="animate-pulse">Thinking...</p>
           </article>
         )}
         <div ref={messagesEndRef} />
       </div>
 
-      <form onSubmit={handleSend} className="border-t border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
+      <form
+        onSubmit={handleSend}
+        className="border-t border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950"
+      >
         <div className="flex items-center gap-2">
           <input
             disabled={isLoading || isInitializing}
