@@ -44,6 +44,7 @@ The current repo only provides the UI shell and backend property/auth/booking en
 | Method  | Route                        | Use                                                       |
 | ------- | ---------------------------- | --------------------------------------------------------- |
 | `GET`   | `/api/owner/statistics`      | Get owner property and booking counts.                    |
+| `GET`   | `/api/owner/bookings`        | List bookings across the owner's properties.              |
 | `GET`   | `/api/owner/properties`      | List the logged-in owner's properties.                    |
 | `PATCH` | `/api/owner/properties/[id]` | Update a property owned by the logged-in owner.           |
 | `PATCH` | `/api/owner/bookings/[id]`   | Confirm or cancel a pending booking on an owned property. |
@@ -55,7 +56,7 @@ The current repo only provides the UI shell and backend property/auth/booking en
 3. Before booking, prompt the user to log in and confirm the session through `/api/auth/me`.
 4. After login, call `/api/tools/book` for new renter booking requests.
 5. When the user asks about existing reservations, call `/api/renter/bookings` to list their bookings and `/api/renter/bookings/[id]` to cancel one.
-6. If the user is an owner, fetch their session with `/api/auth/me`, then use `/api/owner/statistics` for a quick summary and `/api/owner/properties` to list owned properties before allowing property editing and approval actions through the owner routes.
+6. If the user is an owner, fetch their session with `/api/auth/me`, then use `/api/owner/statistics` for a quick summary, `/api/owner/properties` to list owned properties, and `/api/owner/bookings` to inspect booking items before allowing property editing and approval actions through the owner routes.
 7. Keep the UI theme-aware so the chatbot preview follows the app's light and dark mode switcher.
 
 ## Renter Booking Tool
@@ -87,6 +88,21 @@ The response groups counts into two blocks:
 - `bookings.overall`, `bookings.pending`, `bookings.booked`, and `bookings.cancelled` for the owner's booking totals.
 
 In chatbot wording, `booked` means confirmed bookings.
+
+## Owner Booking Tool
+
+Use `/api/owner/bookings` when the chatbot needs to inspect the bookings attached to the owner's properties.
+
+Each item includes:
+
+- `bookingId` as the primary booking identifier.
+- `confirmationId` for compatibility with the rest of the app.
+- `propertyId`, `propertyTitle`, and `propertyLocation`.
+- `status`, `moveInDate`, `moveOutDate`, and `createdAt`.
+- `userName` and `userContact` for renter context.
+- property detail fields like `propertyPrice`, `propertyRooms`, `propertyPetsAllowed`, and `propertyAvailabilityDate` when available.
+
+Use `bookingId` when calling `/api/owner/bookings/[id]` to approve or cancel a specific booking.
 
 ## Reserved Integration Point
 

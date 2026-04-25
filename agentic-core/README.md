@@ -31,7 +31,7 @@ Note: this backend accepts shared keys, but they are not one-time use. They must
 ## 3) Run the API server
 
 ```bash
-c:/Users/HP/coding/UMHackathon26/lebihmudah-web/.venv/Scripts/python.exe -m uvicorn main:app --reload --host 0.0.0.0 --port 8000
+python -m uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 The backend will be available at: `http://localhost:8000`

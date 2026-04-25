@@ -1,5 +1,9 @@
 import { prisma } from "@/lib/db";
-import { BookingListItem, BookingStatus } from "@/lib/types";
+import {
+  BookingListItem,
+  BookingStatus,
+  OwnerBookingSummary,
+} from "@/lib/types";
 
 export class BookingRangeError extends Error {
   constructor(message: string) {
@@ -278,6 +282,17 @@ export async function getOwnerBookings(
   });
 
   return bookings.map((booking) => mapBookingListItem(booking));
+}
+
+export async function getOwnerBookingSummaries(
+  ownerId: string,
+): Promise<OwnerBookingSummary[]> {
+  const bookings = await getOwnerBookings(ownerId);
+
+  return bookings.map((booking) => ({
+    ...booking,
+    bookingId: booking.confirmationId,
+  }));
 }
 
 export async function getPendingBookings(

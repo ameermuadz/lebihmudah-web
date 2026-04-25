@@ -125,4 +125,8 @@ export interface BookingListItem {
   userName?: string | null;
 }
 
+export interface OwnerBookingSummary extends BookingListItem {
+  bookingId: string;
+}
+
 export type UserRole = "USER" | "OWNER";
