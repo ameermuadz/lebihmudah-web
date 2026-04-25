@@ -4,7 +4,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import useSWR, { mutate } from "swr";
 import type { BookingListItem, BookingTimelineCategory } from "@/lib/types";
+
+const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 interface SessionUser {
   id: string;
@@ -104,7 +107,11 @@ export default function BookingsClient({
   initialBookings,
 }: BookingsClientProps) {
   const router = useRouter();
-  const [bookings, setBookings] = useState(initialBookings);
+  const { data: bookings = initialBookings } = useSWR<BookingListItem[]>(
+    "/api/bookings",
+    fetcher,
+    { fallbackData: initialBookings, refreshInterval: 5000 },
+  );
   const [message, setMessage] = useState("");
   const [pendingBookingId, setPendingBookingId] = useState<string | null>(null);
 
@@ -152,14 +159,7 @@ export default function BookingsClient({
       }
 
       const cancelledBooking = data as BookingListItem;
-
-      setBookings((currentBookings) =>
-        currentBookings.map((booking) =>
-          booking.confirmationId === cancelledBooking.confirmationId
-            ? cancelledBooking
-            : booking,
-        ),
-      );
+      await mutate("/api/bookings");
       setMessage(
         `Cancelled ${cancelledBooking.propertyTitle} for ${formatDateLabel(cancelledBooking.moveInDate)} to ${formatDateLabel(cancelledBooking.moveOutDate)}.`,
       );

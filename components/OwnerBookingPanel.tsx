@@ -4,7 +4,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import useSWR, { mutate } from "swr";
 import type { BookingListItem } from "@/lib/types";
+
+const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 interface OwnerBookingPanelProps {
   initialRequests: BookingListItem[];
@@ -24,7 +27,11 @@ export default function OwnerBookingPanel({
   initialRequests,
 }: OwnerBookingPanelProps) {
   const router = useRouter();
-  const [requests, setRequests] = useState(initialRequests);
+  const { data: requests = initialRequests } = useSWR<BookingListItem[]>(
+    "/api/owner/bookings/pending",
+    fetcher,
+    { fallbackData: initialRequests, refreshInterval: 5000 },
+  );
   const [status, setStatus] = useState("");
   const [pendingAction, setPendingAction] = useState<{
     id: string;
@@ -62,11 +69,11 @@ export default function OwnerBookingPanel({
         );
       }
 
-      setRequests((currentRequests) =>
-        currentRequests.filter(
-          (request) => request.confirmationId !== booking.confirmationId,
-        ),
-      );
+      // Revalidate both caches so the full bookings list & dashboard counts update
+      await Promise.all([
+        mutate("/api/owner/bookings/pending"),
+        mutate("/api/owner/bookings"),
+      ]);
       setStatus(
         action === "confirm"
           ? `Confirmed booking request for ${booking.propertyTitle}.`

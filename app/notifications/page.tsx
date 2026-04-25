@@ -32,13 +32,7 @@ export default async function NotificationsPage() {
           </p>
         </section>
 
-        {notifications.length === 0 ? (
-          <section className="rounded-[32px] border border-dashed border-zinc-300 bg-white p-6 text-sm text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400 md:p-8">
-            You have no notifications yet.
-          </section>
-        ) : (
-          <NotificationsList notifications={notifications} />
-        )}
+        <NotificationsList notifications={notifications} />
       </div>
     </main>
   );

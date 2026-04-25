@@ -2,7 +2,10 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import useSWR from "swr";
 import type { BookingStatus } from "@/lib/types";
+
+const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 export type BookingStatusSectionItem = {
   confirmationId: string;
@@ -72,13 +75,21 @@ const formatDateLabel = (value: string) => {
 export default function BookingStatusSections({
   title,
   description,
-  bookings,
+  bookings: initialBookings,
   propertyTitle,
   propertyLocation,
   showPropertyLinks = true,
   visibleStatuses = ["PENDING", "CONFIRMED", "CANCELLED"],
 }: BookingStatusSectionsProps) {
   const router = useRouter();
+  // Only poll from owner bookings API when on the owner dashboard (no propertyTitle override)
+  const shouldPoll = !propertyTitle;
+  const { data: ownerBookings } = useSWR<BookingStatusSectionItem[]>(
+    shouldPoll ? "/api/owner/bookings" : null,
+    fetcher,
+    { fallbackData: initialBookings, refreshInterval: 5000 },
+  );
+  const bookings = ownerBookings ?? initialBookings;
   const sections = STATUS_ORDER.filter((section) =>
     visibleStatuses.includes(section.value),
   ).map((section) => ({

@@ -2,7 +2,10 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import useSWR from "swr";
 import type { NotificationListItem } from "@/lib/types";
+
+const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 interface NotificationsListProps {
   notifications: NotificationListItem[];
@@ -70,9 +73,14 @@ const accentByType: Record<
 };
 
 export default function NotificationsList({
-  notifications,
+  notifications: initialNotifications,
 }: NotificationsListProps) {
   const router = useRouter();
+  const { data: notifications = initialNotifications } = useSWR<NotificationListItem[]>(
+    "/api/notifications",
+    fetcher,
+    { fallbackData: initialNotifications, refreshInterval: 5000 },
+  );
   const [pendingNotificationId, setPendingNotificationId] = useState<
     string | null
   >(null);
@@ -94,6 +102,11 @@ export default function NotificationsList({
 
   return (
     <div className="space-y-4">
+      {notifications.length === 0 ? (
+        <section className="rounded-[32px] border border-dashed border-zinc-300 bg-white p-6 text-sm text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400 md:p-8">
+          You have no notifications yet.
+        </section>
+      ) : null}
       {notifications.map((notification) => (
         <button
           key={notification.id}
