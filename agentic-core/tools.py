@@ -228,62 +228,57 @@ from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import SystemMessage, HumanMessage
 
 @tool
-def message_owner(property_id: str, question: str) -> dict[str, Any]:
+def message_owner(property_id: str, question: str, session_id: str | None = None) -> dict[str, Any]:
     """Messages the property owner with a specific question to clarify details for the user.
 
     Args:
         property_id: Target property identifier.
         question: The exact question you want to ask the property owner on behalf of the renter.
+        session_id: System injected chat session ID.
 
     Returns:
-        dict[str, Any]: A normalized API result object containing the owner's reply.
+        dict[str, Any]: A normalized API result object confirming the message was sent.
     """
-    # Simulate an "Owner Agent" responding to the "Renter Agent"
-    api_key = (os.getenv("ANTHROPIC_API_KEY") or os.getenv("ZHIPUAI_API_KEY") or "").strip()
-    base_url = os.getenv("ANTHROPIC_BASE_URL", "").strip().rstrip("/")
-    model = (os.getenv("ANTHROPIC_MODEL") or os.getenv("ZHIPUAI_MODEL") or "ilmu-glm-5.1").strip()
-    
-    if not api_key:
-        # Fallback to mock if no API key is available in the tool context
-        reply = f"Owner of {property_id} says: Yes, I can accommodate that. Let me know if the renter wants to proceed with booking!"
-    else:
-        try:
-            llm = ChatAnthropic(
-                model=model,
-                anthropic_api_key=api_key,
-                anthropic_api_url=base_url,
-                temperature=0.7,
-                max_tokens=256,
-            )
-            
-            system_prompt = (
-                f"You are the property owner for property ID: {property_id}. "
-                "A real estate agent is asking you a question on behalf of a potential renter. "
-                "You should answer the question reasonably. Ask 1 follow up question back to the renter if it makes sense "
-                "(e.g., asking about their move-in date, how many people, or their profession) to decide if you want to rent to them. "
-                "Keep your response concise."
-            )
-            
-            messages = [
-                SystemMessage(content=system_prompt),
-                HumanMessage(content=question)
-            ]
-            
-            response = llm.invoke(messages)
-            
-            final_text = response.content
-            if isinstance(final_text, list):
-                final_text = " ".join([block.get("text", "") for block in final_text if isinstance(block, dict) and block.get("type") == "text"])
-            reply = str(final_text).strip()
-        except Exception as e:
-            print(f"Owner agent simulation failed: {e}")
-            reply = f"Owner of {property_id} says: I'm currently unavailable, but yes we can discuss further."
+    if not session_id:
+        return {"ok": False, "error": "Missing session ID. Cannot route owner message."}
 
-    return {
-        "ok": True,
-        "status_code": 200,
-        "data": {"reply": reply}
+    payload = {
+        "propertyId": property_id,
+        "question": question,
+        "sessionId": session_id,
     }
+
+    response = _request("POST", "/api/tools/owner-message", payload=payload)
+    if response["ok"]:
+        response["data"] = {"reply": "I have successfully asked the owner this question. We are now waiting for their reply. I will notify the renter when the owner responds."}
+    return response
+
+@tool
+def get_pending_owner_messages(user_token: str | None = None) -> dict[str, Any]:
+    """Fetches questions from renters that the owner needs to answer.
+    
+    Args:
+        user_token: System injected auth token.
+    """
+    if not user_token:
+        return {"ok": False, "error": "Login required."}
+    cookies = _build_auth_cookies(user_token)
+    return _request("GET", "/api/tools/owner-messages", cookies=cookies)
+
+@tool
+def reply_to_owner_message(message_id: str, reply: str, user_token: str | None = None) -> dict[str, Any]:
+    """Replies to a pending question from a renter.
+
+    Args:
+        message_id: The ID of the pending message (from get_pending_owner_messages).
+        reply: The exact response to give to the renter.
+        user_token: System injected auth token.
+    """
+    if not user_token:
+        return {"ok": False, "error": "Login required."}
+    cookies = _build_auth_cookies(user_token)
+    payload = {"reply": reply}
+    return _request("PATCH", f"/api/tools/owner-messages/{message_id}", payload=payload, cookies=cookies)
 
 
 @tool

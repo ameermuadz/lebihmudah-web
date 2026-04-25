@@ -143,6 +143,12 @@ export default function ChatWindow() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
 
+  const isThinking =
+    isLoading ||
+    (!isInitializing &&
+      messages.length > 0 &&
+      messages[messages.length - 1].role === "user");
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -217,6 +223,52 @@ export default function ChatWindow() {
 
     initializeChat();
   }, []);
+
+  // Poll for background updates (e.g. from webhooks or if we left the page while it was thinking)
+  useEffect(() => {
+    if (isInitializing || !sessionId) return;
+
+    const intervalId = setInterval(async () => {
+      if (isLoading) return; // Don't poll while a local request is actively pending
+
+      try {
+        const res = await fetch(`/api/chat/history?sessionId=${sessionId}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data) && data.length > 0) {
+            const mappedMessages: ChatMessage[] = data.map((msg: any, i: number) => ({
+              id: `history-${i}`, // Use index for stable IDs during polling
+              role: msg.role === "assistant" ? "agent" : msg.role,
+              text: msg.content,
+            }));
+
+            const filteredMessages = mappedMessages.filter(
+              (m) =>
+                !(
+                  m.role === "system" ||
+                  (m.role === "user" && m.text.startsWith("[System Update:"))
+                ),
+            );
+
+            setMessages((prev) => {
+              if (prev.length !== filteredMessages.length) return filteredMessages;
+              if (
+                prev.length > 0 &&
+                prev[prev.length - 1].text !== filteredMessages[filteredMessages.length - 1].text
+              ) {
+                return filteredMessages;
+              }
+              return prev;
+            });
+          }
+        }
+      } catch (err) {
+        // silently ignore polling errors
+      }
+    }, 3000);
+
+    return () => clearInterval(intervalId);
+  }, [isInitializing, sessionId, isLoading]);
 
   const handleSend = async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -338,7 +390,7 @@ export default function ChatWindow() {
             </article>
           ))
         )}
-        {isLoading && (
+        {isThinking && (
           <article
             className={`w-full max-w-[82%] rounded-2xl px-4 py-3 text-sm leading-6 ${bubbleClassByRole.agent}`}
           >
@@ -354,7 +406,7 @@ export default function ChatWindow() {
       >
         <div className="flex items-center gap-2">
           <input
-            disabled={isLoading || isInitializing}
+            disabled={isThinking || isInitializing}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="E.g., Find a house under RM1000 for 2 people"
@@ -362,7 +414,7 @@ export default function ChatWindow() {
           />
           <button
             type="submit"
-            disabled={!input.trim() || isLoading || isInitializing}
+            disabled={!input.trim() || isThinking || isInitializing}
             className="rounded-full bg-emerald-600 px-5 py-3 text-sm font-semibold text-white transition-opacity disabled:opacity-60"
           >
             Send

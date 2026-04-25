@@ -216,6 +216,7 @@ export default function HomeSidebar({
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const visibleNavItems =
     user?.role === "OWNER" ? ownerNavItems : publicNavItems;
 
@@ -264,6 +265,33 @@ export default function HomeSidebar({
       isMounted = false;
     };
   }, [pathname]);
+
+  useEffect(() => {
+    if (!user) {
+      setUnreadCount(0);
+      return;
+    }
+
+    let isMounted = true;
+    const fetchUnreadCount = async () => {
+      try {
+        const res = await fetch("/api/notifications?unreadOnly=true");
+        if (res.ok) {
+          const data = await res.json();
+          if (isMounted && Array.isArray(data)) {
+            setUnreadCount(data.length);
+          }
+        }
+      } catch (err) {}
+    };
+
+    void fetchUnreadCount();
+    const interval = setInterval(() => void fetchUnreadCount(), 10000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, [user, pathname]);
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
@@ -370,7 +398,15 @@ export default function HomeSidebar({
                 title={item.label}
                 aria-label={item.label}
               >
-                <Icon className="h-5 w-5 shrink-0" />
+                <div className="relative">
+                  <Icon className="h-5 w-5 shrink-0" />
+                  {item.href === "/notifications" && unreadCount > 0 && (
+                    <span className="absolute -right-1 -top-1 flex h-2.5 w-2.5">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-400 opacity-75"></span>
+                      <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-rose-500"></span>
+                    </span>
+                  )}
+                </div>
                 <span className={isCollapsed ? "sr-only" : "truncate"}>
                   {item.label}
                 </span>

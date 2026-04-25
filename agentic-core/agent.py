@@ -7,7 +7,7 @@ from typing import Any
 from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, ToolMessage
 from memory import SessionMemoryManager
-from tools import check_session, get_property_details, initiate_booking, search_properties, message_owner, get_renter_loa, get_owner_loa, get_owner_statistics, get_owner_properties, get_owner_bookings, manage_booking, update_property, get_renter_bookings, cancel_renter_booking
+from tools import check_session, get_property_details, initiate_booking, search_properties, message_owner, get_renter_loa, get_owner_loa, get_owner_statistics, get_owner_properties, get_owner_bookings, manage_booking, update_property, get_renter_bookings, cancel_renter_booking, get_pending_owner_messages, reply_to_owner_message
 
 RENTER_SYSTEM_PROMPT = """You are the LebihMudah Agentic Core assistant, a smart real estate agent designed to handle property rentals end-to-end for renters.
 
@@ -39,11 +39,13 @@ Follow this workflow strictly:
 4. If they ask to manage a booking request (confirm or cancel), use `manage_booking`.
 5. If they ask for the LOA (Letter of Agreement) for a confirmed booking, use `get_owner_loa`.
 6. If they ask to update a property they own, use `update_property`. Make sure you gather all required fields from them or the existing property details before calling the tool.
-7. Provide helpful insights on their properties and pending actions.
+7. If there are pending questions from renters (or you are asked about them), use `get_pending_owner_messages` to see them.
+8. To reply to a renter's question, use `reply_to_owner_message`. Provide a clear and helpful response.
+9. Provide helpful insights on their properties and pending actions.
 """
 
 RENTER_TOOLS = [search_properties, get_property_details, check_session, initiate_booking, message_owner, get_renter_loa, get_renter_bookings, cancel_renter_booking]
-OWNER_TOOLS = [check_session, get_owner_statistics, get_owner_properties, get_owner_bookings, get_owner_loa, manage_booking, update_property]
+OWNER_TOOLS = [check_session, get_owner_statistics, get_owner_properties, get_owner_bookings, get_owner_loa, manage_booking, update_property, get_pending_owner_messages, reply_to_owner_message]
 MAX_TOOL_ROUNDS = 6
 
 
@@ -70,6 +72,7 @@ def _serialize_tool_result(result: Any) -> str:
 def run_agent(session_id: str, message: str, user_token: str | None, user_role: str | None = "USER") -> str:
     """Runs the GLM agent with tool-calling and SQLite-backed session memory using LangChain."""
     memory = SessionMemoryManager()
+    memory.add_message(session_id, "user", message)
     
     is_owner = (user_role == "OWNER")
     system_prompt = OWNER_SYSTEM_PROMPT if is_owner else RENTER_SYSTEM_PROMPT
@@ -147,7 +150,6 @@ def run_agent(session_id: str, message: str, user_token: str | None, user_role: 
                 final_text = " ".join([block.get("text", "") for block in final_text if isinstance(block, dict) and block.get("type") == "text"])
             
             final_text = str(final_text).strip() or "I could not generate a response right now."
-            memory.add_message(session_id, "user", message)
             memory.add_message(session_id, "assistant", final_text)
             return final_text
 
@@ -167,8 +169,10 @@ def run_agent(session_id: str, message: str, user_token: str | None, user_role: 
                 )
                 continue
 
-            if tool_name in {"check_session", "initiate_booking", "manage_booking", "update_property", "get_renter_bookings", "cancel_renter_booking", "get_owner_statistics", "get_owner_properties", "get_owner_bookings", "get_renter_loa", "get_owner_loa"}:
+            if tool_name in {"check_session", "initiate_booking", "manage_booking", "update_property", "get_renter_bookings", "cancel_renter_booking", "get_owner_statistics", "get_owner_properties", "get_owner_bookings", "get_renter_loa", "get_owner_loa", "get_pending_owner_messages", "reply_to_owner_message"}:
                 tool_args["user_token"] = runtime_token
+            if tool_name in {"message_owner"}:
+                tool_args["session_id"] = session_id
 
             result_str = ""
             if tool_name == "check_session":
@@ -201,6 +205,5 @@ def run_agent(session_id: str, message: str, user_token: str | None, user_role: 
             )
 
     fallback = "I could not complete this request right now. Please try again in a moment."
-    memory.add_message(session_id, "user", message)
     memory.add_message(session_id, "assistant", fallback)
     return fallback

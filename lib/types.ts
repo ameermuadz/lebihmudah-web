@@ -50,7 +50,9 @@ export type NotificationKind =
   | "BOOKING_REJECTED"
   | "BOOKING_CANCELLED_BY_OWNER"
   | "BOOKING_CANCELLED_BY_RENTER"
-  | "PROPERTY_UPDATED";
+  | "PROPERTY_UPDATED"
+  | "OWNER_MESSAGE_REQUEST"
+  | "OWNER_MESSAGE_REPLY";
 
 export interface BookingLoaAttachment {
   bookingId: string;

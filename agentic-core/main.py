@@ -41,6 +41,12 @@ class OwnerReplyWebhookRequest(BaseModel):
     session_id: str = Field(..., min_length=1)
     owner_message: str = Field(..., min_length=1)
 
+class RenterQuestionWebhookRequest(BaseModel):
+    session_id: str = Field(..., min_length=1)
+    renter_session_id: str = Field(..., min_length=1)
+    property_title: str = Field(..., min_length=1)
+    question: str = Field(..., min_length=1)
+
 
 class AgentResponse(BaseModel):
     response: str
@@ -93,6 +99,7 @@ def owner_reply(payload: OwnerReplyWebhookRequest) -> AgentResponse:
         )
 
         renter_message = (
+            "[System Update: Owner Replied]\n"
             "Please respond to the renter based on this owner update. "
             "Summarize the owner reply clearly and suggest next steps if relevant.\n\n"
             f"Owner reply: {payload.owner_message}"
@@ -116,3 +123,37 @@ def owner_reply(payload: OwnerReplyWebhookRequest) -> AgentResponse:
             ) from exc
         logger.exception("Owner webhook handling failed")
         raise HTTPException(status_code=500, detail="Owner webhook handling failed") from exc
+
+@app.post("/api/webhook/renter_question", response_model=AgentResponse)
+def renter_question(payload: RenterQuestionWebhookRequest) -> AgentResponse:
+    try:
+        memory = SessionMemoryManager()
+        memory.add_message(
+            payload.session_id,
+            "system",
+            f"A renter (session: {payload.renter_session_id}) asked a question about your property '{payload.property_title}': {payload.question}",
+        )
+
+        owner_message = (
+            "[System Update: New Renter Question]\n"
+            "Please notify me about this new question from a renter and ask me how I would like to reply. "
+            "Suggest that I can use my tools to reply to pending messages."
+        )
+
+        response_text = run_agent(
+            session_id=payload.session_id,
+            message=owner_message,
+            user_token="",
+            user_role="OWNER"
+        )
+        return AgentResponse(response=response_text)
+    except Exception as exc:
+        if AnthropicAuthenticationError is not None and isinstance(exc, AnthropicAuthenticationError):
+            raise HTTPException(
+                status_code=401,
+                detail=(
+                    "Anthropic authentication failed. Verify ANTHROPIC_API_KEY. "
+                ),
+            ) from exc
+        logger.exception("Renter question webhook handling failed")
+        raise HTTPException(status_code=500, detail="Renter question webhook handling failed") from exc

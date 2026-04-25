@@ -22,7 +22,7 @@ const mapNotification = (notification: {
   createdAt: notification.createdAt.toISOString(),
 });
 
-async function createNotification(
+export async function createNotification(
   input: {
     recipientUserId: string;
     type: NotificationKind;

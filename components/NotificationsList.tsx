@@ -27,6 +27,8 @@ const targetLabelByType: Record<NotificationListItem["type"], string> = {
   BOOKING_CANCELLED_BY_OWNER: "Open booking",
   BOOKING_CANCELLED_BY_RENTER: "Open booking",
   PROPERTY_UPDATED: "Open property",
+  OWNER_MESSAGE_REQUEST: "Open chat",
+  OWNER_MESSAGE_REPLY: "Open chat",
 };
 
 const accentByType: Record<
@@ -56,6 +58,14 @@ const accentByType: Record<
   PROPERTY_UPDATED: {
     dot: "bg-sky-500",
     chip: "bg-sky-100 text-sky-900 dark:bg-sky-950/70 dark:text-sky-100",
+  },
+  OWNER_MESSAGE_REQUEST: {
+    dot: "bg-violet-500",
+    chip: "bg-violet-100 text-violet-900 dark:bg-violet-950/70 dark:text-violet-100",
+  },
+  OWNER_MESSAGE_REPLY: {
+    dot: "bg-indigo-500",
+    chip: "bg-indigo-100 text-indigo-900 dark:bg-indigo-950/70 dark:text-indigo-100",
   },
 };
 
