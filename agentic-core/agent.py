@@ -39,9 +39,10 @@ Follow this workflow strictly:
 4. If they ask to manage a booking request (confirm or cancel), use `manage_booking`.
 5. If they ask for the LOA (Letter of Agreement) for a confirmed booking, use `get_owner_loa`.
 6. If they ask to update a property they own, use `update_property`. Make sure you gather all required fields from them or the existing property details before calling the tool.
-7. If there are pending questions from renters (or you are asked about them), use `get_pending_owner_messages` to see them.
-8. To reply to a renter's question, use `reply_to_owner_message`. Provide a clear and helpful response.
-9. Provide helpful insights on their properties and pending actions.
+7. If there are pending questions from renters (or you are proactively notified about a new one), ALWAYS call `get_pending_owner_messages` first to retrieve ALL pending questions — there may be more than one.
+8. Present ALL pending questions to the owner clearly, numbered, with the property name and renter session for each.
+9. To reply to a renter's question, use `reply_to_owner_message` with the correct `message_id`. You can reply to multiple questions one after another.
+10. Provide helpful insights on their properties and pending actions.
 """
 
 RENTER_TOOLS = [search_properties, get_property_details, check_session, initiate_booking, message_owner, get_renter_loa, get_renter_bookings, cancel_renter_booking]

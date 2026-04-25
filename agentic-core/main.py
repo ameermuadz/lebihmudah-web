@@ -136,8 +136,9 @@ def renter_question(payload: RenterQuestionWebhookRequest) -> AgentResponse:
 
         owner_message = (
             "[System Update: New Renter Question]\n"
-            "Please notify me about this new question from a renter and ask me how I would like to reply. "
-            "Suggest that I can use my tools to reply to pending messages."
+            "A new question from a renter has just arrived. "
+            "Please use `get_pending_owner_messages` to fetch ALL pending questions (there may be more than one), "
+            "then present them all to me clearly, numbered, so I can reply to each one."
         )
 
         response_text = run_agent(
