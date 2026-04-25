@@ -107,7 +107,7 @@ const markdownComponents = {
   ),
   code: ({ inline, children }: MarkdownComponentProps) =>
     inline ? (
-      <code className="rounded bg-black/5 px-1 py-0.5 font-mono text-[0.92em] text-inherit dark:bg-white/10">
+      <code className="rounded-md border border-zinc-300 bg-zinc-100 px-1.5 py-0.5 font-mono text-[0.92em] font-medium text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100">
         {children}
       </code>
     ) : (

@@ -41,6 +41,9 @@ generated/prisma/
 # vercel
 .vercel
 
+# generated LOA PDFs
+public/loas/*.pdf
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
