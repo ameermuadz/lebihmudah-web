@@ -7,7 +7,7 @@ from typing import Any
 from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, ToolMessage
 from memory import SessionMemoryManager
-from tools import check_session, get_property_details, initiate_booking, search_properties, message_owner, request_loa, get_owner_dashboard, manage_booking, update_property
+from tools import check_session, get_property_details, initiate_booking, search_properties, message_owner, get_renter_loa, get_owner_loa, get_owner_statistics, get_owner_properties, get_owner_bookings, manage_booking, update_property, get_renter_bookings, cancel_renter_booking
 
 RENTER_SYSTEM_PROMPT = """You are the LebihMudah Agentic Core assistant, a smart real estate agent designed to handle property rentals end-to-end for renters.
 
@@ -15,14 +15,15 @@ Follow this workflow strictly:
 1. If the user asks to find a house with specific filters (e.g. rent < RM1000, 2 people), use `search_properties`. 
 2. If no properties match exactly, search again with broader constraints to give the closest possible option.
 3. Show the resulting list to the user clearly.
-4. If the user picks a house and has specific questions about it, use the `message_owner` tool to ask the owner directly. Do NOT invent details.
-5. After getting the owner's reply, present the information to the user. The owner might ask some follow up questions (e.g. about move-in date or profession). 
-6. Ask the user the owner's questions to collect data. 
-7. Once you collect the answers from the user, use `message_owner` again to relay the answers back to the owner.
-8. The user can either ask for more info or proceed to rent.
-9. If they proceed to rent, use the `request_loa` tool to contact the owner and ask for a Letter of Agreement (LOA). Show this LOA to the user.
-10. If the user agrees to the LOA, proceed with `initiate_booking` (make sure to `check_session` first).
-11. If they decline or there's no match, end the conversation politely.
+4. If the user asks for their current bookings, use `get_renter_bookings`.
+5. If the user wants to cancel a booking, use `cancel_renter_booking`.
+6. If the user picks a house and has specific questions about it, use the `message_owner` tool to ask the owner directly. Do NOT invent details.
+7. After getting the owner's reply, present the information to the user. The owner might ask some follow up questions (e.g. about move-in date or profession). 
+8. Ask the user the owner's questions to collect data. 
+9. Once you collect the answers from the user, use `message_owner` again to relay the answers back to the owner.
+10. If the user decides to rent, proceed with `initiate_booking` (make sure to `check_session` first).
+11. If the user asks for the LOA (Letter of Agreement) for a confirmed booking, use `get_renter_loa` to fetch the document.
+12. If there's no match or they decline to rent, end the conversation politely.
 
 Other rules:
 - Gracefully handle API errors by explaining what failed and suggesting the next safe action.
@@ -32,14 +33,17 @@ Other rules:
 OWNER_SYSTEM_PROMPT = """You are the LebihMudah Agentic Core assistant, a smart real estate agent designed to help property owners manage their listings.
 
 Follow this workflow strictly:
-1. If the owner asks for an overview or stats of their properties, use `get_owner_dashboard`.
-2. If they ask to manage a booking request (confirm or cancel), use `manage_booking`.
-3. If they ask to update a property they own, use `update_property`. Make sure you gather all required fields from them or the existing property details before calling the tool.
-4. Provide helpful insights on their properties and pending actions.
+1. If the owner asks for an overview or stats of their properties, use `get_owner_statistics`.
+2. If they ask to see their listings, use `get_owner_properties`.
+3. If they ask to see the bookings across their properties, use `get_owner_bookings`.
+4. If they ask to manage a booking request (confirm or cancel), use `manage_booking`.
+5. If they ask for the LOA (Letter of Agreement) for a confirmed booking, use `get_owner_loa`.
+6. If they ask to update a property they own, use `update_property`. Make sure you gather all required fields from them or the existing property details before calling the tool.
+7. Provide helpful insights on their properties and pending actions.
 """
 
-RENTER_TOOLS = [search_properties, get_property_details, check_session, initiate_booking, message_owner, request_loa]
-OWNER_TOOLS = [check_session, get_owner_dashboard, manage_booking, update_property]
+RENTER_TOOLS = [search_properties, get_property_details, check_session, initiate_booking, message_owner, get_renter_loa, get_renter_bookings, cancel_renter_booking]
+OWNER_TOOLS = [check_session, get_owner_statistics, get_owner_properties, get_owner_bookings, get_owner_loa, manage_booking, update_property]
 MAX_TOOL_ROUNDS = 6
 
 
@@ -163,7 +167,7 @@ def run_agent(session_id: str, message: str, user_token: str | None, user_role: 
                 )
                 continue
 
-            if tool_name in {"check_session", "initiate_booking", "manage_booking", "update_property"}:
+            if tool_name in {"check_session", "initiate_booking", "manage_booking", "update_property", "get_renter_bookings", "cancel_renter_booking", "get_owner_statistics", "get_owner_properties", "get_owner_bookings", "get_renter_loa", "get_owner_loa"}:
                 tool_args["user_token"] = runtime_token
 
             result_str = ""

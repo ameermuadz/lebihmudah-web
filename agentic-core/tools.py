@@ -287,42 +287,89 @@ def message_owner(property_id: str, question: str) -> dict[str, Any]:
 
 
 @tool
-def request_loa(property_id: str, tenant_name: str) -> dict[str, Any]:
-    """Requests a Letter of Agreement (LOA) from the property owner when the user decides to proceed to rent.
+def get_renter_loa(booking_id: str, user_token: str) -> dict[str, Any]:
+    """Get the LOA PDF attachment for a renter's confirmed booking.
 
     Args:
-        property_id: Target property identifier.
-        tenant_name: The name of the tenant to put on the agreement.
+        booking_id: Target booking identifier.
+        user_token: System injected auth token.
 
     Returns:
-        dict[str, Any]: A normalized API result object containing the LOA document text.
+        dict[str, Any]: A normalized API result object containing the LOA PDF URL and timestamp.
     """
-    # Mocking LOA generation
-    loa_template = f"--- LETTER OF AGREEMENT ---\nProperty ID: {property_id}\nTenant: {tenant_name}\nTerms: 1 year lease, standard deposit.\nOwner Signature: [Electronically Signed by Owner]\n---------------------------"
-    return {
-        "ok": True,
-        "status_code": 200,
-        "data": {"loa_document": loa_template}
-    }
+    cookies = _build_auth_cookies(user_token)
+    return _request("GET", f"/api/renter/bookings/{booking_id}/loa", cookies=cookies)
 
 
 @tool
-def get_owner_dashboard() -> dict[str, Any]:
-    """Retrieves the property owner's dashboard statistics and pending actions.
-    
+def get_owner_loa(booking_id: str, user_token: str) -> dict[str, Any]:
+    """Get the LOA PDF attachment for an owner's confirmed booking.
+
+    Args:
+        booking_id: Target booking identifier.
+        user_token: System injected auth token.
+
     Returns:
-        dict[str, Any]: Mock data containing views, pending inquiries, and active bookings.
+        dict[str, Any]: A normalized API result object containing the LOA PDF URL and timestamp.
     """
-    return {
-        "ok": True,
-        "status_code": 200,
-        "data": {
-            "total_properties": 2,
-            "total_views": 150,
-            "pending_inquiries": 3,
-            "active_bookings": 1
-        }
-    }
+    cookies = _build_auth_cookies(user_token)
+    return _request("GET", f"/api/owner/bookings/{booking_id}/loa", cookies=cookies)
+
+
+@tool
+def get_renter_bookings(user_token: str) -> dict[str, Any]:
+    """Lists the logged-in renter's bookings with property details and status.
+    
+    Args:
+        user_token: System injected auth token.
+    """
+    cookies = _build_auth_cookies(user_token)
+    return _request("GET", "/api/renter/bookings", cookies=cookies)
+
+
+@tool
+def cancel_renter_booking(booking_id: str, user_token: str) -> dict[str, Any]:
+    """Cancels a renter's booking request.
+    
+    Args:
+        booking_id: The ID of the booking to cancel.
+        user_token: System injected auth token.
+    """
+    cookies = _build_auth_cookies(user_token)
+    return _request("PATCH", f"/api/renter/bookings/{booking_id}", cookies=cookies)
+
+
+@tool
+def get_owner_statistics(user_token: str) -> dict[str, Any]:
+    """Retrieves property owner's statistics such as property and booking counts.
+    
+    Args:
+        user_token: System injected auth token.
+    """
+    cookies = _build_auth_cookies(user_token)
+    return _request("GET", "/api/owner/statistics", cookies=cookies)
+
+
+@tool
+def get_owner_properties(user_token: str) -> dict[str, Any]:
+    """Lists all properties owned by the logged-in owner.
+    
+    Args:
+        user_token: System injected auth token.
+    """
+    cookies = _build_auth_cookies(user_token)
+    return _request("GET", "/api/owner/properties", cookies=cookies)
+
+
+@tool
+def get_owner_bookings(user_token: str) -> dict[str, Any]:
+    """Lists bookings across the owner's properties.
+    
+    Args:
+        user_token: System injected auth token.
+    """
+    cookies = _build_auth_cookies(user_token)
+    return _request("GET", "/api/owner/bookings", cookies=cookies)
 
 
 @tool
