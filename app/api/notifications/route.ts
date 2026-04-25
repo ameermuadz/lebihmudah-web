@@ -26,3 +26,19 @@ export async function GET(request: NextRequest) {
       : filteredNotifications,
   );
 }
+
+export async function PATCH(request: NextRequest) {
+  const sessionToken = request.cookies.get(AUTH_COOKIE_NAME)?.value;
+  const session = await getSessionUser(sessionToken);
+
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { markAllNotificationsAsRead } = await import(
+    "@/lib/services/notificationService"
+  );
+  await markAllNotificationsAsRead({ userId: session.user.id });
+
+  return NextResponse.json({ ok: true });
+}

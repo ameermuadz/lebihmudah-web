@@ -80,6 +80,21 @@ export async function markNotificationAsRead(input: {
   return mapNotification(updatedNotification);
 }
 
+export async function markAllNotificationsAsRead(input: {
+  userId: string;
+}): Promise<void> {
+  await prisma.notification.updateMany({
+    where: {
+      recipientUserId: input.userId,
+      isRead: false,
+    },
+    data: {
+      isRead: true,
+      readAt: new Date(),
+    },
+  });
+}
+
 export async function notifyOwnerOfNewBookingRequest(
   input: {
     ownerUserId: string;

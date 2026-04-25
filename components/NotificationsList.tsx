@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import useSWR from "swr";
+import useSWR, { useSWRConfig } from "swr";
 import type { NotificationListItem } from "@/lib/types";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
@@ -76,6 +76,7 @@ export default function NotificationsList({
   notifications: initialNotifications,
 }: NotificationsListProps) {
   const router = useRouter();
+  const { mutate } = useSWRConfig();
   const { data: notifications = initialNotifications } = useSWR<NotificationListItem[]>(
     "/api/notifications",
     fetcher,
@@ -84,14 +85,48 @@ export default function NotificationsList({
   const [pendingNotificationId, setPendingNotificationId] = useState<
     string | null
   >(null);
+  const [isMarkingAll, setIsMarkingAll] = useState(false);
+
+  const handleMarkAsRead = async (id: string) => {
+    setPendingNotificationId(id);
+    try {
+      await fetch(`/api/notifications/${id}`, {
+        method: "PATCH",
+      });
+      void mutate("/api/notifications");
+    } catch {
+      // ignore errors
+    } finally {
+      setPendingNotificationId(null);
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    setIsMarkingAll(true);
+    try {
+      await fetch("/api/notifications", {
+        method: "PATCH",
+      });
+      void mutate("/api/notifications");
+    } catch {
+      // ignore errors
+    } finally {
+      setIsMarkingAll(false);
+    }
+  };
 
   const handleOpen = async (notification: NotificationListItem) => {
-    setPendingNotificationId(notification.id);
+    if (notification.isRead) {
+      router.push(notification.targetUrl);
+      return;
+    }
 
+    setPendingNotificationId(notification.id);
     try {
       await fetch(`/api/notifications/${notification.id}`, {
         method: "PATCH",
       });
+      void mutate("/api/notifications");
     } catch {
       // opening still continues even if mark-read fails
     } finally {
@@ -100,55 +135,87 @@ export default function NotificationsList({
     }
   };
 
+  const unreadCount = notifications.filter((n) => !n.isRead).length;
+
   return (
     <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-sm font-medium text-zinc-500 dark:text-zinc-400">
+          {unreadCount > 0 ? `${unreadCount} unread notification${unreadCount === 1 ? "" : "s"}` : "No unread notifications"}
+        </h2>
+        {unreadCount > 0 && (
+          <button
+            onClick={handleMarkAllAsRead}
+            disabled={isMarkingAll}
+            className="text-xs font-semibold text-emerald-600 hover:text-emerald-500 disabled:opacity-50 dark:text-emerald-400 dark:hover:text-emerald-300"
+          >
+            {isMarkingAll ? "Marking..." : "Mark all as read"}
+          </button>
+        )}
+      </div>
+
       {notifications.length === 0 ? (
         <section className="rounded-[32px] border border-dashed border-zinc-300 bg-white p-6 text-sm text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400 md:p-8">
           You have no notifications yet.
         </section>
       ) : null}
+
       {notifications.map((notification) => (
-        <button
+        <div
           key={notification.id}
-          type="button"
-          onClick={() => void handleOpen(notification)}
-          className={`w-full rounded-[28px] border p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:bg-white dark:hover:bg-zinc-900 md:p-5 ${
+          className={`group relative overflow-hidden rounded-[28px] border transition-all ${
             notification.isRead
               ? "border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900"
-              : "border-emerald-200 bg-emerald-50 dark:border-emerald-900/60 dark:bg-emerald-950/30"
+              : "border-emerald-200 bg-emerald-50 shadow-sm dark:border-emerald-900/60 dark:bg-emerald-950/30"
           }`}
         >
-          <div className="flex items-start gap-3">
-            <span
-              className={`mt-1 h-2.5 w-2.5 rounded-full ${accentByType[notification.type].dot}`}
-            />
-            <div className="min-w-0 flex-1 space-y-2">
-              <div className="flex flex-wrap items-center gap-2">
-                <p className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
-                  {notification.title}
-                </p>
+          <div className="flex items-start">
+            <button
+              type="button"
+              onClick={() => void handleOpen(notification)}
+              className="flex-1 p-4 text-left md:p-5"
+            >
+              <div className="flex items-start gap-3">
                 <span
-                  className={`rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${accentByType[notification.type].chip}`}
+                  className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${accentByType[notification.type].dot}`}
+                />
+                <div className="min-w-0 flex-1 space-y-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
+                      {notification.title}
+                    </p>
+                    <span
+                      className={`rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${accentByType[notification.type].chip}`}
+                    >
+                      {targetLabelByType[notification.type]}
+                    </span>
+                  </div>
+                  <p className="text-sm leading-6 text-zinc-700 dark:text-zinc-300">
+                    {notification.message}
+                  </p>
+                  <div className="text-xs text-zinc-500 dark:text-zinc-400">
+                    {formatDateLabel(notification.createdAt)}
+                  </div>
+                </div>
+              </div>
+            </button>
+
+            {!notification.isRead && (
+              <div className="flex items-center self-stretch pr-4 md:pr-5">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void handleMarkAsRead(notification.id);
+                  }}
+                  disabled={pendingNotificationId === notification.id}
+                  className="rounded-full bg-white/80 px-4 py-2 text-xs font-semibold text-emerald-700 shadow-sm transition hover:bg-white hover:text-emerald-800 disabled:opacity-50 dark:bg-zinc-800/80 dark:text-emerald-400 dark:hover:bg-zinc-800 dark:hover:text-emerald-300"
                 >
-                  {targetLabelByType[notification.type]}
-                </span>
+                  {pendingNotificationId === notification.id ? "..." : "Read"}
+                </button>
               </div>
-              <p className="text-sm leading-6 text-zinc-700 dark:text-zinc-300">
-                {notification.message}
-              </p>
-              <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-zinc-500 dark:text-zinc-400">
-                <span>{formatDateLabel(notification.createdAt)}</span>
-                <span>
-                  {pendingNotificationId === notification.id
-                    ? "Opening..."
-                    : notification.isRead
-                      ? "Read"
-                      : "Unread"}
-                </span>
-              </div>
-            </div>
+            )}
           </div>
-        </button>
+        </div>
       ))}
     </div>
   );
