@@ -47,6 +47,7 @@ model User {
   sessions     Session[]
   bookings     Booking[]
   properties   Property[]
+  notifications Notification[]
 }
 
 model Session {
@@ -59,6 +60,21 @@ model Session {
 
   @@index([userId])
   @@index([token])
+}
+
+model Notification {
+  id              String   @id @default(cuid())
+  recipientUserId String
+  type            String
+  title           String
+  message         String
+  targetUrl       String
+  isRead          Boolean  @default(false)
+  readAt          DateTime?
+  createdAt       DateTime @default(now())
+  recipient       User     @relation(fields: [recipientUserId], references: [id], onDelete: Cascade)
+
+  @@index([recipientUserId, isRead, createdAt])
 }
 
 model PropertyImage {

@@ -59,6 +59,21 @@ const BookingsIcon = ({ className }: { className: string }) => (
   </svg>
 );
 
+const NotificationsIcon = ({ className }: { className: string }) => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+  >
+    <path d="M6.5 9.5a5.5 5.5 0 0 1 11 0c0 6 2 7 2 7H4.5s2-1 2-7" />
+    <path d="M9.5 18a2.5 2.5 0 0 0 5 0" />
+  </svg>
+);
+
 const DashboardIcon = ({ className }: { className: string }) => (
   <svg
     viewBox="0 0 24 24"
@@ -163,6 +178,11 @@ const publicNavItems = [
     icon: ChatIcon,
   },
   {
+    href: "/notifications",
+    label: "Notifications",
+    icon: NotificationsIcon,
+  },
+  {
     href: "/bookings",
     label: "My Bookings",
     icon: BookingsIcon,
@@ -179,6 +199,11 @@ const ownerNavItems = [
     href: "/chat",
     label: "Platform Chatbot",
     icon: ChatIcon,
+  },
+  {
+    href: "/notifications",
+    label: "Notifications",
+    icon: NotificationsIcon,
   },
 ];
 
@@ -257,7 +282,7 @@ export default function HomeSidebar({
 
   return (
     <aside
-      className={`sticky top-4 h-fit overflow-hidden rounded-[32px] border border-zinc-300 bg-white shadow-[0_24px_80px_-40px_rgba(0,0,0,0.35)] transition-all duration-300 dark:border-zinc-700 dark:bg-zinc-900 ${
+      className={`max-h-[calc(100vh-3rem)] overflow-y-auto overflow-x-hidden rounded-[32px] border border-zinc-300 bg-white shadow-[0_24px_80px_-40px_rgba(0,0,0,0.35)] transition-all duration-300 dark:border-zinc-700 dark:bg-zinc-900 ${
         isCollapsed ? "px-3 py-3" : "p-4"
       }`}
       aria-label="Sidebar navigation"

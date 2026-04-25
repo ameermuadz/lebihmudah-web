@@ -5,6 +5,11 @@ import {
   OwnerBookingSummary,
 } from "@/lib/types";
 import { ensureBookingLoa } from "@/lib/services/loaService";
+import {
+  notifyOwnerOfNewBookingRequest,
+  notifyOwnerOfRenterCancellation,
+  notifyRenterOfBookingDecision,
+} from "@/lib/services/notificationService";
 
 export class BookingRangeError extends Error {
   constructor(message: string) {
@@ -180,7 +185,7 @@ export async function createBooking(
   const booking = await prisma.$transaction(async (tx) => {
     const property = await tx.property.findUnique({
       where: { id: input.propertyId },
-      select: { id: true, availabilityDate: true },
+      select: { id: true, title: true, ownerId: true, availabilityDate: true },
     });
 
     if (!property) {
@@ -232,6 +237,15 @@ export async function createBooking(
       },
     });
 
+    await notifyOwnerOfNewBookingRequest(
+      {
+        ownerUserId: property.ownerId,
+        bookingId: createdBooking.id,
+        propertyTitle: property.title,
+        renterLabel: input.userContact,
+      },
+      tx,
+    );
     await tx.property.update({
       where: { id: property.id },
       data: {
@@ -453,6 +467,16 @@ export async function updateBookingStatus(input: {
     },
   });
 
+  if (updatedBooking.userId) {
+    await notifyRenterOfBookingDecision({
+      renterUserId: updatedBooking.userId,
+      bookingId: updatedBooking.id,
+      propertyTitle: updatedBooking.property.title,
+      previousStatus: booking.status,
+      nextStatus: input.status,
+    });
+  }
+
   const hydratedBooking = await hydrateBookingLoa(updatedBooking);
 
   return mapBookingListItem(hydratedBooking);
@@ -512,6 +536,13 @@ export async function cancelBooking(input: {
         },
       },
     },
+  });
+
+  await notifyOwnerOfRenterCancellation({
+    ownerUserId: booking.property.ownerId,
+    bookingId: booking.id,
+    propertyTitle: booking.property.title,
+    renterLabel: booking.user?.name ?? booking.userContact,
   });
 
   return mapBookingListItem(updatedBooking);

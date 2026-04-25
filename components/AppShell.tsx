@@ -41,7 +41,7 @@ export default function AppShell({ children }: AppShellProps) {
         } as CSSProperties
       }
     >
-      <div className="w-full shrink-0 lg:w-[var(--sidebar-width)]">
+      <div className="w-full shrink-0 lg:sticky lg:top-6 lg:h-fit lg:w-[var(--sidebar-width)]">
         <HomeSidebar
           isCollapsed={isSidebarCollapsed}
           onToggleCollapse={() => setIsSidebarCollapsed((current) => !current)}

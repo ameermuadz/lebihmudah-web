@@ -6,6 +6,7 @@ import {
   PropertyDetails,
   SearchPayload,
 } from "@/lib/types";
+import { notifyRentersOfPropertyUpdate } from "@/lib/services/notificationService";
 
 export class PropertyAuthorizationError extends Error {
   constructor(message: string) {
@@ -323,6 +324,28 @@ export async function updatePropertyByOwner(input: {
         })),
       });
     }
+
+    const activeRenters = await tx.booking.findMany({
+      where: {
+        propertyId: existingProperty.id,
+        status: { not: "CANCELLED" },
+        userId: { not: null },
+      },
+      select: {
+        userId: true,
+      },
+    });
+
+    await notifyRentersOfPropertyUpdate(
+      {
+        recipientUserIds: activeRenters
+          .map((booking) => booking.userId)
+          .filter((userId): userId is string => Boolean(userId)),
+        propertyId: existingProperty.id,
+        propertyTitle: title,
+      },
+      tx,
+    );
   });
 
   const updatedProperty = await prisma.property.findUnique({

@@ -44,10 +44,28 @@ export interface OwnerStatistics {
   };
 }
 
+export type NotificationKind =
+  | "BOOKING_REQUESTED"
+  | "BOOKING_ACCEPTED"
+  | "BOOKING_REJECTED"
+  | "BOOKING_CANCELLED_BY_OWNER"
+  | "BOOKING_CANCELLED_BY_RENTER"
+  | "PROPERTY_UPDATED";
+
 export interface BookingLoaAttachment {
   bookingId: string;
   loaPdfUrl: string;
   loaGeneratedAt: string;
+}
+
+export interface NotificationListItem {
+  id: string;
+  type: NotificationKind;
+  title: string;
+  message: string;
+  targetUrl: string;
+  isRead: boolean;
+  createdAt: string;
 }
 
 export interface SearchPayload {
