@@ -323,13 +323,7 @@ export default function ChatWindow() {
     }
   };
 
-  const handleClearChat = () => {
-    if (!isLoggedIn) {
-      setSessionId(`guest-${generateSessionId()}`);
-    }
-    // We only clear the UI here. For logged in users, the backend still holds the history unless an API deletes it.
-    setMessages(DEFAULT_MESSAGES);
-  };
+
 
   return (
     <section className="flex h-[calc(100vh-3rem)] max-h-[860px] flex-col overflow-hidden rounded-[32px] border border-zinc-200 bg-white shadow-[0_24px_80px_-48px_rgba(15,23,42,0.3)] transition-colors dark:border-zinc-800 dark:bg-zinc-900">
@@ -363,14 +357,7 @@ export default function ChatWindow() {
             </span>
           </div>
         </div>
-        <div className="mt-4 sm:mt-0">
-          <button
-            onClick={handleClearChat}
-            className="text-xs px-3 py-1.5 rounded-lg border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 dark:border-red-900/30 dark:bg-red-950/30 dark:text-red-400 dark:hover:bg-red-900/50 transition-colors"
-          >
-            Clear Chat
-          </button>
-        </div>
+
       </header>
 
       <div className="flex-1 space-y-3 overflow-y-auto bg-slate-50 px-4 py-5 dark:bg-zinc-950">
