@@ -142,12 +142,14 @@ export default function ChatWindow() {
   const [sessionId, setSessionId] = useState<string>("");
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [isError, setIsError] = useState(false);
 
   const isThinking =
-    isLoading ||
-    (!isInitializing &&
-      messages.length > 0 &&
-      messages[messages.length - 1].role === "user");
+    !isError &&
+    (isLoading ||
+      (!isInitializing &&
+        messages.length > 0 &&
+        messages[messages.length - 1].role === "user"));
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -229,7 +231,7 @@ export default function ChatWindow() {
     if (isInitializing || !sessionId) return;
 
     const intervalId = setInterval(async () => {
-      if (isLoading) return; // Don't poll while a local request is actively pending
+      if (isLoading || isError) return; // Don't poll while a local request is actively pending or if we have an error
 
       try {
         const res = await fetch(`/api/chat/history?sessionId=${sessionId}`);
@@ -273,6 +275,8 @@ export default function ChatWindow() {
   const handleSend = async (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!input.trim() || isLoading || isInitializing) return;
+
+    setIsError(false);
 
     const userMessage: ChatMessage = {
       id: Math.random().toString(36),
@@ -318,6 +322,7 @@ export default function ChatWindow() {
           text: "Error: Could not connect to the agent. Please make sure the agentic-core backend is running.",
         },
       ]);
+      setIsError(true);
     } finally {
       setIsLoading(false);
     }
