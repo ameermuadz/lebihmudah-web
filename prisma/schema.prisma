@@ -112,6 +112,7 @@ model OwnerMessage {
   ownerId    String
   propertyId String
   question   String
+  renterName String    @default("Renter")
   sessionId  String
   status     String    @default("PENDING")
   ownerReply String?

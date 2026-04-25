@@ -44,6 +44,7 @@ class OwnerReplyWebhookRequest(BaseModel):
 class RenterQuestionWebhookRequest(BaseModel):
     session_id: str = Field(..., min_length=1)
     renter_session_id: str = Field(..., min_length=1)
+    renter_name: str = Field(default="A renter")
     property_title: str = Field(..., min_length=1)
     question: str = Field(..., min_length=1)
 
@@ -131,7 +132,7 @@ def renter_question(payload: RenterQuestionWebhookRequest) -> AgentResponse:
         memory.add_message(
             payload.session_id,
             "system",
-            f"A renter (session: {payload.renter_session_id}) asked a question about your property '{payload.property_title}': {payload.question}",
+            f"{payload.renter_name} (session: {payload.renter_session_id}) asked a question about your property '{payload.property_title}': {payload.question}",
         )
 
         owner_message = (

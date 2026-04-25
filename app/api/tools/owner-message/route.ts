@@ -25,11 +25,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    let renterName = "Renter (Guest)";
+    if (sessionId.startsWith("user-")) {
+      const userId = sessionId.replace("user-", "");
+      const renter = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { name: true },
+      });
+      if (renter) {
+        renterName = renter.name;
+      }
+    }
+
     const ownerMessage = await prisma.ownerMessage.create({
       data: {
         ownerId: property.ownerId,
         propertyId: propertyId,
         question: question,
+        renterName: renterName,
         sessionId: sessionId,
         status: "PENDING",
       },
@@ -39,7 +52,7 @@ export async function POST(request: NextRequest) {
       recipientUserId: property.ownerId,
       type: "OWNER_MESSAGE_REQUEST",
       title: "New question from renter",
-      message: `A renter asked a question about ${property.title}.`,
+      message: `${renterName} asked a question about ${property.title}.`,
       targetUrl: "/chat",
     });
 
@@ -52,6 +65,7 @@ export async function POST(request: NextRequest) {
         body: JSON.stringify({
           session_id: ownerSessionId,
           renter_session_id: sessionId,
+          renter_name: renterName,
           property_title: property.title,
           question: question,
         }),
