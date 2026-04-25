@@ -2,20 +2,15 @@
 
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
+import AmenityPicker from "@/components/AmenityPicker";
+import ListInput from "@/components/ListInput";
+import ReorderableListInput from "@/components/ReorderableListInput";
 import BookingStatusSections from "@/components/BookingStatusSections";
 import type { PropertyDetails } from "@/lib/types";
 
 interface PropertyOwnerEditorProps {
   property: PropertyDetails;
 }
-
-const toMultilineText = (values: string[]) => values.join("\n");
-
-const parseMultilineText = (value: string) =>
-  value
-    .split(/\r?\n/)
-    .map((entry) => entry.trim())
-    .filter(Boolean);
 
 export default function PropertyOwnerEditor({
   property,
@@ -31,10 +26,11 @@ export default function PropertyOwnerEditor({
   const [availabilityDate, setAvailabilityDate] = useState(
     property.availabilityDate,
   );
-  const [amenities, setAmenities] = useState(
-    toMultilineText(property.amenities),
+
+  const [selectedAmenities, setSelectedAmenities] = useState<string[]>(
+    property.amenities,
   );
-  const [rules, setRules] = useState(toMultilineText(property.rules));
+  const [rules, setRules] = useState<string[]>(property.rules);
   const [status, setStatus] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
@@ -57,8 +53,8 @@ export default function PropertyOwnerEditor({
           petsAllowed: petsAllowed === "true",
           description,
           availabilityDate,
-          amenities: parseMultilineText(amenities),
-          rules: parseMultilineText(rules),
+          amenities: selectedAmenities,
+          rules: rules,
         }),
       });
 
@@ -206,29 +202,22 @@ export default function PropertyOwnerEditor({
               />
             </label>
 
-            <label className="space-y-2 md:col-span-2">
-              <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                Amenities, one per line
-              </span>
-              <textarea
-                value={amenities}
-                onChange={(event) => setAmenities(event.target.value)}
-                rows={4}
-                className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-emerald-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+            <div className="space-y-2 md:col-span-2">
+              <AmenityPicker
+                selected={selectedAmenities}
+                onChange={setSelectedAmenities}
+                label="Amenities"
               />
-            </label>
+            </div>
 
-            <label className="space-y-2 md:col-span-2">
-              <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                Rules, one per line
-              </span>
-              <textarea
-                value={rules}
-                onChange={(event) => setRules(event.target.value)}
-                rows={4}
-                className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-emerald-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+            <div className="space-y-2 md:col-span-2">
+              <ReorderableListInput
+                items={rules}
+                onChange={setRules}
+                placeholder="Type a rule..."
+                label="Property Rules (drag or use arrows to rearrange)"
               />
-            </label>
+            </div>
 
             <div className="md:col-span-2">
               <button

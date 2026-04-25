@@ -7,6 +7,10 @@ export interface Property {
   petsAllowed: boolean;
   images: string[];
   ownerId: string;
+  description?: string;
+  availabilityDate?: string;
+  amenities?: string[];
+  rules?: string[];
 }
 
 export interface PropertyDetails extends Property {
@@ -75,6 +79,7 @@ export interface SearchPayload {
   maxPrice?: number;
   rooms?: number;
   petsAllowed?: boolean;
+  amenities?: string[];
   limit?: number;
 }
 

@@ -92,6 +92,10 @@ const mapSummary = (property: PropertyWithRelations): Property => ({
   rooms: property.rooms,
   petsAllowed: property.petsAllowed,
   ownerId: property.ownerId,
+  description: property.description,
+  availabilityDate: property.availabilityDate,
+  amenities: [...property.amenities].sort(bySortOrder).map((a) => a.value),
+  rules: [...property.rules].sort(bySortOrder).map((r) => r.value),
   images: [...property.images].sort(bySortOrder).map((image) => image.url),
 });
 
@@ -129,7 +133,7 @@ export async function searchProperties(
       ? Math.max(1, Math.min(100, Math.floor(filters.limit)))
       : undefined;
 
-  const where = {
+  const where: Record<string, unknown> = {
     ...(filters.location?.trim()
       ? { location: { contains: filters.location.trim() } }
       : {}),
@@ -143,6 +147,23 @@ export async function searchProperties(
       ? { petsAllowed: filters.petsAllowed }
       : {}),
   };
+
+  // Filter by amenities using AND logic: every selected amenity must appear in at least one row
+  const amenityFilters =
+    Array.isArray(filters.amenities) && filters.amenities.length > 0
+      ? filters.amenities
+          .map((a) => a.trim())
+          .filter(Boolean)
+          .map((a) => ({
+            amenities: {
+              some: { value: { contains: a } },
+            },
+          }))
+      : [];
+
+  if (amenityFilters.length > 0) {
+    (where as Record<string, unknown>).AND = amenityFilters;
+  }
 
   const properties = await prisma.property.findMany({
     where,

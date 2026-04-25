@@ -41,6 +41,7 @@ export async function POST(request: NextRequest) {
       maxPrice?: unknown;
       rooms?: unknown;
       petsAllowed?: unknown;
+      amenities?: unknown;
       limit?: unknown;
     };
 
@@ -52,6 +53,9 @@ export async function POST(request: NextRequest) {
       maxPrice: toNumber(body.maxPrice),
       rooms: toNumber(body.rooms),
       petsAllowed: toBoolean(body.petsAllowed),
+      amenities: Array.isArray(body.amenities)
+        ? (body.amenities as unknown[]).filter((a): a is string => typeof a === "string" && a.trim().length > 0)
+        : undefined,
       limit: toNumber(body.limit),
     };
 

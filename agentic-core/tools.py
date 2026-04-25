@@ -90,13 +90,13 @@ def _request(
 
 
 @tool
-def search_properties(location: str = "", max_price: int | None = None, room_count: int | None = None) -> dict[str, Any]:
-    """Searches the property catalog by location, budget, and room count.
+def search_properties(location: str = "", max_price: int | None = None, room_count: int | None = None, amenities: list[str] | None = None) -> dict[str, Any]:
+    """Searches the property catalog by location, budget, room count, and amenities.
 
     This tool calls the Next.js discovery endpoint at POST `/api/tools/search`.
     The API supports open discovery, so it can be used before login. It returns
-    a list of matching properties with compact fields suitable for shortlist
-    generation and follow-up detail calls.
+    a list of matching properties with detailed fields including description,
+    amenities, and rules, which allows for rich property discovery.
 
     Args:
         location: Free-text location filter such as a city, district, or area
@@ -105,18 +105,20 @@ def search_properties(location: str = "", max_price: int | None = None, room_cou
             to avoid price filtering.
         room_count: Optional minimum number of rooms requested by the user.
             Pass `None` when room constraints are not provided.
+        amenities: Optional list of amenity keywords to filter by (e.g., ["WiFi", "Pool"]).
+            The search uses AND logic, requiring all specified amenities to be present.
 
     Returns:
         dict[str, Any]: A normalized API result object.
             - `ok` (bool): `True` when the API responded with 2xx.
             - `status_code` (int): HTTP status code from the Next.js API.
             - `data` (Any): Parsed response payload (usually a list of
-              properties when successful).
+              properties with rich details when successful).
             - `error` (str): Present only when the request failed.
 
     When to use:
-        Use this first when the user asks to browse, compare, or narrow down
-        homes by budget and rooms before selecting a specific property ID.
+        Use this when the user asks to browse, compare, or narrow down homes
+        by budget, rooms, location, or specific features like "WiFi" or "Pool".
     """
     payload: dict[str, Any] = {}
 
@@ -126,6 +128,8 @@ def search_properties(location: str = "", max_price: int | None = None, room_cou
         payload["maxPrice"] = max_price
     if room_count is not None:
         payload["rooms"] = room_count
+    if amenities:
+        payload["amenities"] = amenities
 
     return _request("POST", "/api/tools/search", payload=payload)
 
