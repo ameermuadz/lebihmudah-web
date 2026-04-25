@@ -2,8 +2,12 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
+import useSWR, { mutate } from "swr";
 import type { BookingListItem, BookingTimelineCategory } from "@/lib/types";
+
+const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 interface SessionUser {
   id: string;
@@ -102,7 +106,12 @@ export default function BookingsClient({
   user,
   initialBookings,
 }: BookingsClientProps) {
-  const [bookings, setBookings] = useState(initialBookings);
+  const router = useRouter();
+  const { data: bookings = initialBookings } = useSWR<BookingListItem[]>(
+    "/api/bookings",
+    fetcher,
+    { fallbackData: initialBookings, refreshInterval: 5000 },
+  );
   const [message, setMessage] = useState("");
   const [pendingBookingId, setPendingBookingId] = useState<string | null>(null);
 
@@ -150,14 +159,7 @@ export default function BookingsClient({
       }
 
       const cancelledBooking = data as BookingListItem;
-
-      setBookings((currentBookings) =>
-        currentBookings.map((booking) =>
-          booking.confirmationId === cancelledBooking.confirmationId
-            ? cancelledBooking
-            : booking,
-        ),
-      );
+      await mutate("/api/bookings");
       setMessage(
         `Cancelled ${cancelledBooking.propertyTitle} for ${formatDateLabel(cancelledBooking.moveInDate)} to ${formatDateLabel(cancelledBooking.moveOutDate)}.`,
       );
@@ -167,6 +169,10 @@ export default function BookingsClient({
     } finally {
       setPendingBookingId(null);
     }
+  };
+
+  const openBookingDetails = (bookingId: string) => {
+    router.push(`/bookings/${bookingId}`);
   };
 
   return (
@@ -255,11 +261,24 @@ export default function BookingsClient({
                       return (
                         <article
                           key={booking.confirmationId}
-                          className="rounded-[28px] border border-zinc-200 bg-zinc-50 p-4 shadow-sm transition hover:border-emerald-200 hover:bg-white dark:border-zinc-800 dark:bg-zinc-950 dark:hover:border-emerald-900/50 dark:hover:bg-zinc-900 md:p-5"
+                          role="link"
+                          tabIndex={0}
+                          aria-label={`Open booking details for ${booking.propertyTitle}`}
+                          onClick={() =>
+                            openBookingDetails(booking.confirmationId)
+                          }
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter" || event.key === " ") {
+                              event.preventDefault();
+                              openBookingDetails(booking.confirmationId);
+                            }
+                          }}
+                          className="cursor-pointer rounded-[28px] border border-zinc-200 bg-zinc-50 p-4 shadow-sm transition hover:border-emerald-200 hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:border-emerald-900/50 dark:hover:bg-zinc-900 md:p-5"
                         >
                           <div className="flex flex-col gap-4 md:flex-row md:items-start">
                             <Link
-                              href={`/properties/${booking.propertyId}`}
+                              href={`/bookings/${booking.confirmationId}`}
+                              onClick={(event) => event.stopPropagation()}
                               className="relative h-28 w-full overflow-hidden rounded-2xl md:h-24 md:w-28"
                             >
                               <Image
@@ -274,7 +293,8 @@ export default function BookingsClient({
                               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                                 <div className="min-w-0">
                                   <Link
-                                    href={`/properties/${booking.propertyId}`}
+                                    href={`/bookings/${booking.confirmationId}`}
+                                    onClick={(event) => event.stopPropagation()}
                                     className="block truncate text-lg font-semibold text-zinc-900 transition hover:text-emerald-700 dark:text-zinc-100 dark:hover:text-emerald-300"
                                   >
                                     {booking.propertyTitle}
@@ -308,6 +328,7 @@ export default function BookingsClient({
                               <div className="flex flex-wrap gap-3">
                                 <Link
                                   href={`/properties/${booking.propertyId}`}
+                                  onClick={(event) => event.stopPropagation()}
                                   className="inline-flex items-center justify-center rounded-2xl border border-zinc-300 bg-white px-4 py-2 text-sm font-semibold text-zinc-900 transition hover:border-zinc-400 hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:border-zinc-600 dark:hover:bg-zinc-800"
                                 >
                                   View property
@@ -315,9 +336,10 @@ export default function BookingsClient({
                                 {canCancel ? (
                                   <button
                                     type="button"
-                                    onClick={() =>
-                                      void handleCancel(booking.confirmationId)
-                                    }
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      void handleCancel(booking.confirmationId);
+                                    }}
                                     disabled={
                                       pendingBookingId ===
                                       booking.confirmationId

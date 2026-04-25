@@ -47,6 +47,7 @@ model User {
   sessions     Session[]
   bookings     Booking[]
   properties   Property[]
+  notifications Notification[]
 }
 
 model Session {
@@ -59,6 +60,21 @@ model Session {
 
   @@index([userId])
   @@index([token])
+}
+
+model Notification {
+  id              String   @id @default(cuid())
+  recipientUserId String
+  type            String
+  title           String
+  message         String
+  targetUrl       String
+  isRead          Boolean  @default(false)
+  readAt          DateTime?
+  createdAt       DateTime @default(now())
+  recipient       User     @relation(fields: [recipientUserId], references: [id], onDelete: Cascade)
+
+  @@index([recipientUserId, isRead, createdAt])
 }
 
 model PropertyImage {
@@ -96,6 +112,7 @@ model OwnerMessage {
   ownerId    String
   propertyId String
   question   String
+  renterName String    @default("Renter")
   sessionId  String
   status     String    @default("PENDING")
   ownerReply String?
@@ -115,6 +132,8 @@ model Booking {
   moveInDate  String
   moveOutDate String
   status      String   @default("PENDING")
+  loaPdfUrl   String?
+  loaGeneratedAt DateTime?
   createdAt   DateTime @default(now())
   property    Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
   user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)

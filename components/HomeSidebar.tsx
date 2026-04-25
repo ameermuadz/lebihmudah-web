@@ -59,6 +59,21 @@ const BookingsIcon = ({ className }: { className: string }) => (
   </svg>
 );
 
+const NotificationsIcon = ({ className }: { className: string }) => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+  >
+    <path d="M6.5 9.5a5.5 5.5 0 0 1 11 0c0 6 2 7 2 7H4.5s2-1 2-7" />
+    <path d="M9.5 18a2.5 2.5 0 0 0 5 0" />
+  </svg>
+);
+
 const DashboardIcon = ({ className }: { className: string }) => (
   <svg
     viewBox="0 0 24 24"
@@ -163,6 +178,11 @@ const publicNavItems = [
     icon: ChatIcon,
   },
   {
+    href: "/notifications",
+    label: "Notifications",
+    icon: NotificationsIcon,
+  },
+  {
     href: "/bookings",
     label: "My Bookings",
     icon: BookingsIcon,
@@ -180,6 +200,11 @@ const ownerNavItems = [
     label: "Platform Chatbot",
     icon: ChatIcon,
   },
+  {
+    href: "/notifications",
+    label: "Notifications",
+    icon: NotificationsIcon,
+  },
 ];
 
 export default function HomeSidebar({
@@ -191,6 +216,7 @@ export default function HomeSidebar({
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const visibleNavItems =
     user?.role === "OWNER" ? ownerNavItems : publicNavItems;
 
@@ -240,6 +266,33 @@ export default function HomeSidebar({
     };
   }, [pathname]);
 
+  useEffect(() => {
+    if (!user) {
+      setUnreadCount(0);
+      return;
+    }
+
+    let isMounted = true;
+    const fetchUnreadCount = async () => {
+      try {
+        const res = await fetch("/api/notifications?unreadOnly=true");
+        if (res.ok) {
+          const data = await res.json();
+          if (isMounted && Array.isArray(data)) {
+            setUnreadCount(data.length);
+          }
+        }
+      } catch (err) {}
+    };
+
+    void fetchUnreadCount();
+    const interval = setInterval(() => void fetchUnreadCount(), 10000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, [user, pathname]);
+
   const handleLogout = async () => {
     setIsLoggingOut(true);
 
@@ -257,7 +310,7 @@ export default function HomeSidebar({
 
   return (
     <aside
-      className={`sticky top-4 h-fit overflow-hidden rounded-[32px] border border-zinc-300 bg-white shadow-[0_24px_80px_-40px_rgba(0,0,0,0.35)] transition-all duration-300 dark:border-zinc-700 dark:bg-zinc-900 ${
+      className={`max-h-[calc(100vh-3rem)] overflow-y-auto overflow-x-hidden rounded-[32px] border border-zinc-300 bg-white shadow-[0_24px_80px_-40px_rgba(0,0,0,0.35)] transition-all duration-300 dark:border-zinc-700 dark:bg-zinc-900 ${
         isCollapsed ? "px-3 py-3" : "p-4"
       }`}
       aria-label="Sidebar navigation"
@@ -345,7 +398,15 @@ export default function HomeSidebar({
                 title={item.label}
                 aria-label={item.label}
               >
-                <Icon className="h-5 w-5 shrink-0" />
+                <div className="relative">
+                  <Icon className="h-5 w-5 shrink-0" />
+                  {item.href === "/notifications" && unreadCount > 0 && (
+                    <span className="absolute -right-1 -top-1 flex h-2.5 w-2.5">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-400 opacity-75"></span>
+                      <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-rose-500"></span>
+                    </span>
+                  )}
+                </div>
                 <span className={isCollapsed ? "sr-only" : "truncate"}>
                   {item.label}
                 </span>

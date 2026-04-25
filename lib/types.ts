@@ -7,6 +7,10 @@ export interface Property {
   petsAllowed: boolean;
   images: string[];
   ownerId: string;
+  description?: string;
+  availabilityDate?: string;
+  amenities?: string[];
+  rules?: string[];
 }
 
 export interface PropertyDetails extends Property {
@@ -32,11 +36,50 @@ export interface OwnerMessage {
   resolvedAt?: string | null;
 }
 
+export interface OwnerStatistics {
+  properties: {
+    overall: number;
+  };
+  bookings: {
+    overall: number;
+    pending: number;
+    booked: number;
+    cancelled: number;
+  };
+}
+
+export type NotificationKind =
+  | "BOOKING_REQUESTED"
+  | "BOOKING_ACCEPTED"
+  | "BOOKING_REJECTED"
+  | "BOOKING_CANCELLED_BY_OWNER"
+  | "BOOKING_CANCELLED_BY_RENTER"
+  | "PROPERTY_UPDATED"
+  | "OWNER_MESSAGE_REQUEST"
+  | "OWNER_MESSAGE_REPLY";
+
+export interface BookingLoaAttachment {
+  bookingId: string;
+  loaPdfUrl: string;
+  loaGeneratedAt: string;
+}
+
+export interface NotificationListItem {
+  id: string;
+  type: NotificationKind;
+  title: string;
+  message: string;
+  targetUrl: string;
+  isRead: boolean;
+  createdAt: string;
+}
+
 export interface SearchPayload {
   location?: string;
   maxPrice?: number;
   rooms?: number;
   petsAllowed?: boolean;
+  amenities?: string[];
   limit?: number;
 }
 
@@ -100,6 +143,10 @@ export interface BookingListItem {
   propertyTitle: string;
   propertyLocation: string;
   propertyImage: string;
+  propertyPrice?: number;
+  propertyRooms?: number;
+  propertyPetsAllowed?: boolean;
+  propertyAvailabilityDate?: string;
   userContact: string;
   moveInDate: string;
   moveOutDate: string;
@@ -107,6 +154,12 @@ export interface BookingListItem {
   createdAt: string;
   userId?: string | null;
   userName?: string | null;
+  loaPdfUrl?: string | null;
+  loaGeneratedAt?: string | null;
+}
+
+export interface OwnerBookingSummary extends BookingListItem {
+  bookingId: string;
 }
 
 export type UserRole = "USER" | "OWNER";

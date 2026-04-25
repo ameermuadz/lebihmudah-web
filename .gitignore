@@ -41,6 +41,15 @@ generated/prisma/
 # vercel
 .vercel
 
+# generated LOA PDFs
+public/loas/*.pdf
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# agentic-core
+agentic-core/api_calls.log
+agentic-core/chat_history.db
+agentic-core/*.log
+agentic-core/*.db

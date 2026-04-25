@@ -2,8 +2,12 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
+import useSWR, { mutate } from "swr";
 import type { BookingListItem } from "@/lib/types";
+
+const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 interface OwnerBookingPanelProps {
   initialRequests: BookingListItem[];
@@ -22,7 +26,12 @@ const formatDateLabel = (value: string) => {
 export default function OwnerBookingPanel({
   initialRequests,
 }: OwnerBookingPanelProps) {
-  const [requests, setRequests] = useState(initialRequests);
+  const router = useRouter();
+  const { data: requests = initialRequests } = useSWR<BookingListItem[]>(
+    "/api/owner/bookings/pending",
+    fetcher,
+    { fallbackData: initialRequests, refreshInterval: 5000 },
+  );
   const [status, setStatus] = useState("");
   const [pendingAction, setPendingAction] = useState<{
     id: string;
@@ -60,11 +69,11 @@ export default function OwnerBookingPanel({
         );
       }
 
-      setRequests((currentRequests) =>
-        currentRequests.filter(
-          (request) => request.confirmationId !== booking.confirmationId,
-        ),
-      );
+      // Revalidate both caches so the full bookings list & dashboard counts update
+      await Promise.all([
+        mutate("/api/owner/bookings/pending"),
+        mutate("/api/owner/bookings"),
+      ]);
       setStatus(
         action === "confirm"
           ? `Confirmed booking request for ${booking.propertyTitle}.`
@@ -76,6 +85,10 @@ export default function OwnerBookingPanel({
     } finally {
       setPendingAction(null);
     }
+  };
+
+  const openBookingDetails = (bookingId: string) => {
+    router.push(`/bookings/${bookingId}`);
   };
 
   return (
@@ -113,11 +126,22 @@ export default function OwnerBookingPanel({
           {requests.map((booking) => (
             <article
               key={booking.confirmationId}
-              className="rounded-[28px] border border-zinc-200 bg-zinc-50 p-4 shadow-sm transition hover:border-amber-200 hover:bg-white dark:border-zinc-800 dark:bg-zinc-950 dark:hover:border-amber-900/50 dark:hover:bg-zinc-900 md:p-5"
+              role="link"
+              tabIndex={0}
+              aria-label={`Open booking details for ${booking.propertyTitle}`}
+              onClick={() => openBookingDetails(booking.confirmationId)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  openBookingDetails(booking.confirmationId);
+                }
+              }}
+              className="cursor-pointer rounded-[28px] border border-zinc-200 bg-zinc-50 p-4 shadow-sm transition hover:border-amber-200 hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:border-amber-900/50 dark:hover:bg-zinc-900 md:p-5"
             >
               <div className="flex flex-col gap-4 md:flex-row md:items-start">
                 <Link
                   href={`/properties/${booking.propertyId}`}
+                  onClick={(event) => event.stopPropagation()}
                   className="relative h-28 w-full overflow-hidden rounded-2xl md:h-24 md:w-28"
                 >
                   <Image
@@ -133,6 +157,7 @@ export default function OwnerBookingPanel({
                     <div className="min-w-0">
                       <Link
                         href={`/properties/${booking.propertyId}`}
+                        onClick={(event) => event.stopPropagation()}
                         className="block truncate text-lg font-semibold text-zinc-900 transition hover:text-amber-700 dark:text-zinc-100 dark:hover:text-amber-300"
                       >
                         {booking.propertyTitle}
@@ -162,7 +187,10 @@ export default function OwnerBookingPanel({
                   <div className="flex flex-wrap gap-3">
                     <button
                       type="button"
-                      onClick={() => void handleDecision(booking, "confirm")}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        void handleDecision(booking, "confirm");
+                      }}
                       disabled={pendingAction?.id === booking.confirmationId}
                       className="inline-flex items-center justify-center rounded-2xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:bg-zinc-400 dark:disabled:bg-zinc-700"
                     >
@@ -173,7 +201,10 @@ export default function OwnerBookingPanel({
                     </button>
                     <button
                       type="button"
-                      onClick={() => void handleDecision(booking, "cancel")}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        void handleDecision(booking, "cancel");
+                      }}
                       disabled={pendingAction?.id === booking.confirmationId}
                       className="inline-flex items-center justify-center rounded-2xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-500 disabled:cursor-not-allowed disabled:bg-zinc-400 dark:disabled:bg-zinc-700"
                     >

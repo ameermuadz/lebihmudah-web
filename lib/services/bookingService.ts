@@ -1,5 +1,15 @@
 import { prisma } from "@/lib/db";
-import { BookingListItem, BookingStatus } from "@/lib/types";
+import {
+  BookingListItem,
+  BookingStatus,
+  OwnerBookingSummary,
+} from "@/lib/types";
+import { ensureBookingLoa } from "@/lib/services/loaService";
+import {
+  notifyOwnerOfNewBookingRequest,
+  notifyOwnerOfRenterCancellation,
+  notifyRenterOfBookingDecision,
+} from "@/lib/services/notificationService";
 
 export class BookingRangeError extends Error {
   constructor(message: string) {
@@ -88,11 +98,17 @@ type BookingWithRelations = {
   moveOutDate: string;
   status: string;
   createdAt: Date;
+  loaPdfUrl: string | null;
+  loaGeneratedAt: Date | null;
   property: {
     id: string;
     ownerId: string;
     title: string;
     location: string;
+    price: number;
+    rooms: number;
+    petsAllowed: boolean;
+    availabilityDate: string;
     images: Array<{ url: string; sortOrder: number }>;
   };
   user: { id: string; name: string } | null;
@@ -113,6 +129,10 @@ const mapBookingListItem = (
   propertyTitle: booking.property.title,
   propertyLocation: booking.property.location,
   propertyImage: getPrimaryImageUrl(booking.property.images),
+  propertyPrice: booking.property.price,
+  propertyRooms: booking.property.rooms,
+  propertyPetsAllowed: booking.property.petsAllowed,
+  propertyAvailabilityDate: booking.property.availabilityDate,
   userContact: booking.userContact,
   moveInDate: booking.moveInDate,
   moveOutDate: booking.moveOutDate,
@@ -120,7 +140,31 @@ const mapBookingListItem = (
   createdAt: booking.createdAt.toISOString(),
   userId: booking.userId,
   userName: booking.user?.name ?? null,
+  loaPdfUrl: booking.loaPdfUrl,
+  loaGeneratedAt: booking.loaGeneratedAt?.toISOString() ?? null,
 });
+
+const hydrateBookingLoa = async (booking: BookingWithRelations) => {
+  if (booking.status !== "CONFIRMED") {
+    return booking;
+  }
+
+  if (booking.loaPdfUrl && booking.loaGeneratedAt) {
+    return booking;
+  }
+
+  const attachment = await ensureBookingLoa(booking.id);
+
+  if (!attachment) {
+    return booking;
+  }
+
+  return {
+    ...booking,
+    loaPdfUrl: attachment.loaPdfUrl,
+    loaGeneratedAt: new Date(attachment.loaGeneratedAt),
+  };
+};
 
 export async function createBooking(
   input: CreateBookingInput,
@@ -141,7 +185,7 @@ export async function createBooking(
   const booking = await prisma.$transaction(async (tx) => {
     const property = await tx.property.findUnique({
       where: { id: input.propertyId },
-      select: { id: true, availabilityDate: true },
+      select: { id: true, title: true, ownerId: true, availabilityDate: true },
     });
 
     if (!property) {
@@ -193,6 +237,15 @@ export async function createBooking(
       },
     });
 
+    await notifyOwnerOfNewBookingRequest(
+      {
+        ownerUserId: property.ownerId,
+        bookingId: createdBooking.id,
+        propertyTitle: property.title,
+        renterLabel: input.userContact,
+      },
+      tx,
+    );
     await tx.property.update({
       where: { id: property.id },
       data: {
@@ -241,7 +294,11 @@ export async function getUserBookings(
     orderBy: [{ moveInDate: "asc" }, { createdAt: "desc" }],
   });
 
-  return bookings.map((booking) => mapBookingListItem(booking));
+  const hydratedBookings = await Promise.all(
+    bookings.map((booking) => hydrateBookingLoa(booking)),
+  );
+
+  return hydratedBookings.map((booking) => mapBookingListItem(booking));
 }
 
 export async function getOwnerBookings(
@@ -269,7 +326,22 @@ export async function getOwnerBookings(
     orderBy: [{ createdAt: "desc" }],
   });
 
-  return bookings.map((booking) => mapBookingListItem(booking));
+  const hydratedBookings = await Promise.all(
+    bookings.map((booking) => hydrateBookingLoa(booking)),
+  );
+
+  return hydratedBookings.map((booking) => mapBookingListItem(booking));
+}
+
+export async function getOwnerBookingSummaries(
+  ownerId: string,
+): Promise<OwnerBookingSummary[]> {
+  const bookings = await getOwnerBookings(ownerId);
+
+  return bookings.map((booking) => ({
+    ...booking,
+    bookingId: booking.confirmationId,
+  }));
 }
 
 export async function getPendingBookings(
@@ -395,7 +467,19 @@ export async function updateBookingStatus(input: {
     },
   });
 
-  return mapBookingListItem(updatedBooking);
+  if (updatedBooking.userId) {
+    await notifyRenterOfBookingDecision({
+      renterUserId: updatedBooking.userId,
+      bookingId: updatedBooking.id,
+      propertyTitle: updatedBooking.property.title,
+      previousStatus: booking.status,
+      nextStatus: input.status,
+    });
+  }
+
+  const hydratedBooking = await hydrateBookingLoa(updatedBooking);
+
+  return mapBookingListItem(hydratedBooking);
 }
 
 export async function cancelBooking(input: {
@@ -452,6 +536,13 @@ export async function cancelBooking(input: {
         },
       },
     },
+  });
+
+  await notifyOwnerOfRenterCancellation({
+    ownerUserId: booking.property.ownerId,
+    bookingId: booking.id,
+    propertyTitle: booking.property.title,
+    renterLabel: booking.user?.name ?? booking.userContact,
   });
 
   return mapBookingListItem(updatedBooking);
