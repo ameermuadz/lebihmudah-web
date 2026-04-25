@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
+import BookingDetailsActions from "@/components/BookingDetailsActions";
 import { AUTH_COOKIE_NAME } from "@/lib/auth";
 import { getSessionUser } from "@/lib/services/authService";
 import {
@@ -165,61 +166,94 @@ export default async function BookingDetailsPage({
           </div>
 
           <div className="mt-6 grid gap-6 lg:grid-cols-[1.25fr_0.75fr]">
-            <article className="overflow-hidden rounded-[28px] border border-zinc-200 bg-zinc-50 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
-              <div className="relative h-72 w-full">
-                <Image
-                  src={booking.propertyImage}
-                  alt={booking.propertyTitle}
-                  fill
-                  className="object-cover"
-                />
-              </div>
-              <div className="space-y-5 p-5 md:p-6">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.22em] text-zinc-500 dark:text-zinc-400">
-                      Stay period
-                    </p>
-                    <p className="mt-2 text-xl font-semibold text-zinc-900 dark:text-zinc-100">
-                      {formatDateLabel(booking.moveInDate)} to{" "}
-                      {formatDateLabel(booking.moveOutDate)}
-                    </p>
-                  </div>
-                  <span
-                    className={`inline-flex w-fit rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] ${statusStyles[booking.status]}`}
-                  >
-                    {booking.status}
-                  </span>
+            <div className="space-y-4">
+              <article className="overflow-hidden rounded-[28px] border border-zinc-200 bg-zinc-50 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
+                <div className="relative h-72 w-full">
+                  <Image
+                    src={booking.propertyImage}
+                    alt={booking.propertyTitle}
+                    fill
+                    className="object-cover"
+                  />
                 </div>
+                <div className="space-y-5 p-5 md:p-6">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.22em] text-zinc-500 dark:text-zinc-400">
+                        Stay period
+                      </p>
+                      <p className="mt-2 text-xl font-semibold text-zinc-900 dark:text-zinc-100">
+                        {formatDateLabel(booking.moveInDate)} to{" "}
+                        {formatDateLabel(booking.moveOutDate)}
+                      </p>
+                    </div>
+                    <span
+                      className={`inline-flex w-fit rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] ${statusStyles[booking.status]}`}
+                    >
+                      {booking.status}
+                    </span>
+                  </div>
 
-                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                  <div className="rounded-2xl border border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900">
-                    <p className="text-xs uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
-                      Booking created
-                    </p>
-                    <p className="mt-2 text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                      {formatDateTimeLabel(booking.createdAt)}
-                    </p>
-                  </div>
-                  <div className="rounded-2xl border border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900">
-                    <p className="text-xs uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
-                      Booking contact
-                    </p>
-                    <p className="mt-2 text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                      {booking.userContact}
-                    </p>
-                  </div>
-                  <div className="rounded-2xl border border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900">
-                    <p className="text-xs uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
-                      Booking ID
-                    </p>
-                    <p className="mt-2 break-all text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                      {booking.confirmationId}
-                    </p>
+                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                    <div className="rounded-2xl border border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900">
+                      <p className="text-xs uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
+                        Booking created
+                      </p>
+                      <p className="mt-2 text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                        {formatDateTimeLabel(booking.createdAt)}
+                      </p>
+                    </div>
+                    <div className="rounded-2xl border border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900">
+                      <p className="text-xs uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
+                        Booking contact
+                      </p>
+                      <p className="mt-2 text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                        {booking.userContact}
+                      </p>
+                    </div>
+                    <div className="rounded-2xl border border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900">
+                      <p className="text-xs uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
+                        Booking ID
+                      </p>
+                      <p className="mt-2 break-all text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                        {booking.confirmationId}
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </article>
+              </article>
+
+              <BookingDetailsActions
+                bookingId={booking.confirmationId}
+                role={session.user.role}
+                status={booking.status}
+                moveOutDate={booking.moveOutDate}
+              />
+
+              {booking.status === "CONFIRMED" && booking.loaPdfUrl ? (
+                <section className="rounded-[28px] border border-emerald-200 bg-emerald-50 p-5 shadow-sm dark:border-emerald-900/60 dark:bg-emerald-950/40">
+                  <p className="text-xs uppercase tracking-[0.22em] text-emerald-700 dark:text-emerald-200">
+                    Open LOA
+                  </p>
+                  <p className="mt-3 text-sm text-emerald-900 dark:text-emerald-100">
+                    This confirmed booking has a letter of agreement attached.
+                  </p>
+                  {booking.loaGeneratedAt ? (
+                    <p className="mt-2 text-xs text-emerald-800/80 dark:text-emerald-100/80">
+                      Generated on {formatDateTimeLabel(booking.loaGeneratedAt)}
+                    </p>
+                  ) : null}
+                  <Link
+                    href={booking.loaPdfUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-4 inline-flex items-center justify-center rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-500"
+                  >
+                    Open LOA PDF
+                  </Link>
+                </section>
+              ) : null}
+            </div>
 
             <aside className="space-y-4">
               <section className="rounded-[28px] border border-zinc-200 bg-zinc-50 p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
@@ -306,30 +340,6 @@ export default async function BookingDetailsPage({
                   </p>
                 </div>
               </section>
-
-              {booking.status === "CONFIRMED" && booking.loaPdfUrl ? (
-                <section className="rounded-[28px] border border-emerald-200 bg-emerald-50 p-5 shadow-sm dark:border-emerald-900/60 dark:bg-emerald-950/40">
-                  <p className="text-xs uppercase tracking-[0.22em] text-emerald-700 dark:text-emerald-200">
-                    Open LOA
-                  </p>
-                  <p className="mt-3 text-sm text-emerald-900 dark:text-emerald-100">
-                    This confirmed booking has a letter of agreement attached.
-                  </p>
-                  {booking.loaGeneratedAt ? (
-                    <p className="mt-2 text-xs text-emerald-800/80 dark:text-emerald-100/80">
-                      Generated on {formatDateTimeLabel(booking.loaGeneratedAt)}
-                    </p>
-                  ) : null}
-                  <Link
-                    href={booking.loaPdfUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="mt-4 inline-flex items-center justify-center rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-500"
-                  >
-                    Open LOA PDF
-                  </Link>
-                </section>
-              ) : null}
             </aside>
           </div>
         </section>
