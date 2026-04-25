@@ -1,3 +1,7 @@
+# Pitching Presentation
+
+Gdrive link = https://drive.google.com/drive/folders/1qcqKiCF-_lJAIVZ3Ci3najKrhKHHmlPf?usp=sharing
+
 # LebihMudah.my Property Platform
 
 LebihMudah.my is a Next.js 14 property search and booking demo backed by Prisma and SQLite. It includes authentication, real API routes, seeded demo data, and a user-friendly browsing experience for properties. The `/chat` page is a platform chatbot preview only for now.
